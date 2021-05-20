@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import cv2
-from torch.utils import data
 from torch.utils.data import Dataset
 
 class PSR_Dataset(Dataset):
@@ -12,7 +11,6 @@ class PSR_Dataset(Dataset):
                             1:'scissors',
                             2:'rock'
                             }
-
         self.dataset_paths = [os.path.join(dataset_path, label) for label in ['paper','scissors','rock']]
         for idx, dataset_path in enumerate(self.dataset_paths):
             data_path_list = self.get_read_file_list(dataset_path)
@@ -22,7 +20,7 @@ class PSR_Dataset(Dataset):
     def __getitem__(self, index):
         data_path = self.data_paths_list[index]
         data_label = self.data_labels_list[index]
-        img = cv2.imread(data_path, -1)
+        img = cv2.imread(data_path, 1)
         return img, data_label
     #
     def __len__(self):
