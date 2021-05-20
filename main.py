@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import data.data_loading
 import time
+from datetime import datetime
 from torch.utils.data import DataLoader
 import utils.img_process as u_ip
 import utils.io as u_io
@@ -28,6 +29,8 @@ if __name__ =='__main__':
 
     temp = u_ip.img_square(PSR_Dataset_img)
     u_io.show_pic(temp,'temp','freedom')
+
+    u_io.save_pic(temp, 'temp', 'experiment/'+datetime.now().strftime('%Y%m%d-%H_%M_%S')+'/')
 
 #TODO: 下边这段代码是视频形式显示删了，不需要了
     for i in range(120*3):

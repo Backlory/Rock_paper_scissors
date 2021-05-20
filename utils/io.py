@@ -89,7 +89,7 @@ def show_pic(data,windowname = 'default',showtype='freeze'):
     if showtype=='freeze':
         cv2.waitKey(0)
     else:
-        cv2.waitKey(1000*60*2)
+        cv2.waitKey(30)
 
 
 
