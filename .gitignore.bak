@@ -18,3 +18,5 @@
 *.MOV
 *.avi
 *.data
+
+test.py
