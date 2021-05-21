@@ -27,8 +27,7 @@ if __name__ =='__main__':
     PSR_Dataset_label = np.array(PSR_Dataset_label)
 
     temp = u_idsip.img_square(PSR_Dataset_img)
-    u_idsip.show_pic(temp,'temp','freedom')
-
+    #u_idsip.show_pic(temp,'temp','freedom')
     u_idsip.save_pic(temp, 'temp', 'experiment/'+datetime.now().strftime('%Y%m%d-%H_%M_%S')+'/')
 
 #TODO: 下边这段代码是视频形式显示删了，不需要了

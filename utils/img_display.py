@@ -3,6 +3,8 @@ from PIL import Image
 import cv2
 import os,sys
 
+from .structure_trans import gray_to_3d
+
 
 def cv2numpy(img):
     '''
@@ -172,14 +174,4 @@ def img_square(imgs):
         for n in range(temp):#拼接	
             img_out_mat[:, m*height:(m+1)*height, n*width:(n+1)*width] = imgs[m*temp+n,:,:,:]
     return img_out_mat
-
-
-
-def gray_to_3d(img):
-    '''
-    灰度转换为3d
-    input:单通道灰度图
-    output:三通道灰度图
-    '''
-    return np.concatenate((img, img, img), axis = 0)
 
