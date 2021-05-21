@@ -4,8 +4,7 @@ import data.data_loading
 import time
 from datetime import datetime
 from torch.utils.data import DataLoader
-import utils.img_process as u_ip
-import utils.io as u_io
+import utils.img_display as u_idsip
 
 if __name__ =='__main__':
     #数据加载
@@ -16,7 +15,7 @@ if __name__ =='__main__':
     PSR_Dataset_label = []
     for idx, item in enumerate(PSR_Dataset):
         img, label = item
-        img = u_io.cv2numpy(img)    #channal, height, width
+        img = u_idsip.cv2numpy(img)    #channal, height, width
         #
         PSR_Dataset_img.append(img)
         PSR_Dataset_label.append(label)
@@ -27,10 +26,10 @@ if __name__ =='__main__':
     PSR_Dataset_label = PSR_Dataset_label[0:120] + PSR_Dataset_label[840:960] + PSR_Dataset_label[1680:1800]
     PSR_Dataset_label = np.array(PSR_Dataset_label)
 
-    temp = u_ip.img_square(PSR_Dataset_img)
-    u_io.show_pic(temp,'temp','freedom')
+    temp = u_idsip.img_square(PSR_Dataset_img)
+    u_idsip.show_pic(temp,'temp','freedom')
 
-    u_io.save_pic(temp, 'temp', 'experiment/'+datetime.now().strftime('%Y%m%d-%H_%M_%S')+'/')
+    u_idsip.save_pic(temp, 'temp', 'experiment/'+datetime.now().strftime('%Y%m%d-%H_%M_%S')+'/')
 
 #TODO: 下边这段代码是视频形式显示删了，不需要了
     for i in range(120*3):
