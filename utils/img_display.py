@@ -3,20 +3,10 @@ from PIL import Image
 import cv2
 import os,sys
 
-from .structure_trans import gray_to_3d
+from .structure_trans import gray2ggg, cv2numpy
 
 
-def cv2numpy(img):
-    '''
-    输入（32，32，3），输出（3，32，32）
-    输入（1500, 32，32，3），输出（1500, 3，32，32）
-    '''
-    if len(img.shape) == 3:
-        assert(img.shape[2] == 1 or img.shape[2] == 3)
-        return np.transpose(img,(2,0,1))
-    else:
-        assert(img.shape[3] == 1 or img.shape[3] == 3)
-        return np.transpose(img,(0,3,1,2))
+
 
 
 
@@ -129,7 +119,7 @@ def img_hstack(imgs):
     img_out = imgs[0]
     for img in imgs[1:]:
         if img.shape[0] == 1 and img_out.shape[0] == 3:#通道扩增
-            img = gray_to_3d(img)
+            img = gray2ggg(img)
         img_out = np.concatenate((img_out, img), axis = 2)
     return img_out
 
@@ -150,7 +140,7 @@ def img_vstack(imgs):
     img_out = imgs[0]
     for img in imgs[1:]:
         if img.shape[0] == 1 and img_out.shape[0] == 3:#通道扩增
-            img = gray_to_3d(img)
+            img = gray2ggg(img)
         img_out = np.concatenate((img_out, img), axis = 1)
     return img_out
 
