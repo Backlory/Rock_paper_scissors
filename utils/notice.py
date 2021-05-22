@@ -1,7 +1,11 @@
-
+import os
 
 def colorstr(*input):
-    # Colors a string https://en.wikipedia.org/wiki/ANSI_escape_code, i.e.  colorstr('blue', 'hello world')
+    '''
+    输入一串字符和格式，用欧逗号隔开。默认是蓝色加粗。
+    eg. 
+    colorstr('blue', 'hello world')
+    '''
     string, *args = input if len(input) > 1 else (input[0], 'blue', 'bold')  # color arguments, string
     colors = {'black': '\033[30m',  # basic colors
               'red': '\033[31m',
