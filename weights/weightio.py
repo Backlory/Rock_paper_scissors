@@ -65,7 +65,7 @@ if __name__ == "__main__":
     class m:
         def __init__(self):
             self.name = '123'
-            self.a = np.array(range(10000))#40000000
+            self.a = np.array(range(1))#40000000
             return
         def check(self):
             print(126)
