@@ -3,34 +3,23 @@ import cv2
 import data.data_loading
 import time
 from datetime import datetime
-from torch.utils.data import DataLoader
 import utils.img_display as u_idsip
+from model.preprosess import Preprosessing
 
 if __name__ =='__main__':
     #数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data')
     
     #数据预处理
-    PSR_Dataset_img = []
-    PSR_Dataset_label = []
-    for idx, item in enumerate(PSR_Dataset):
-        img, label = item
-        img = u_idsip.cv2numpy(img)    #channal, height, width
-        #
-        PSR_Dataset_img.append(img)
-        PSR_Dataset_label.append(label)
-    
-    #转化为numpy格式
-    PSR_Dataset_img = PSR_Dataset_img[0:120] + PSR_Dataset_img[840:960] + PSR_Dataset_img[1680:1800]
-    PSR_Dataset_img = np.array(PSR_Dataset_img)
-    PSR_Dataset_label = PSR_Dataset_label[0:120] + PSR_Dataset_label[840:960] + PSR_Dataset_label[1680:1800]
-    PSR_Dataset_label = np.array(PSR_Dataset_label)
+    PSR_Dataset_img, PSR_Dataset_label = Preprosessing(PSR_Dataset)
 
+    #保存样例图片
     temp = u_idsip.img_square(PSR_Dataset_img)
     #u_idsip.show_pic(temp,'temp','freedom')
     u_idsip.save_pic(temp, 'temp', 'experiment/'+datetime.now().strftime('%Y%m%d-%H_%M_%S')+'/')
 
 #TODO: 下边这段代码是视频形式显示删了，不需要了
+'''
     for i in range(120*3):
         #
         img = PSR_Dataset_img[i]
@@ -46,3 +35,4 @@ if __name__ =='__main__':
 
         cv2.imshow('a', img)
         cv2.waitKey(10)
+        '''

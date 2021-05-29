@@ -3,11 +3,7 @@ from PIL import Image
 import cv2
 import os,sys
 
-from .structure_trans import gray2ggg, cv2numpy
-
-
-
-
+from .structure_trans import gray2ggg
 
 
 def prepare_path(name_dir):
@@ -24,10 +20,9 @@ def prepare_path(name_dir):
     return 1
 
 
-
 def save_pic(data,filename,filedir = ''):
     '''
-    对三维data,保存png图片。
+    将三维data保存成png图片。
     save_pic(temp,'1','test/test1')，
     '''
     assert (len(data.shape)==3) #channels, height, width
@@ -49,7 +44,6 @@ def save_pic(data,filename,filedir = ''):
         img.save( './'+ filedir +'/' + filename + '.png')  #【】【】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】
     except:
         print('file dir error')
-
 
 
 def show_pic(data,windowname = 'default',showtype='freeze'):
@@ -84,7 +78,6 @@ def show_pic(data,windowname = 'default',showtype='freeze'):
         cv2.waitKey(30)
 
 
-
 def _check_image(imgs):
     temp = imgs.shape
     #
@@ -101,11 +94,10 @@ def _check_image(imgs):
     return 1
 
 
-
 def img_hstack(imgs):
     '''
     水平摆放图片。4d->3d
-    [][][][]
+    [图][图][图][图]
     input: imgs, [num, channal, h, width]
     output: img, [channal, h, width*num]
 
