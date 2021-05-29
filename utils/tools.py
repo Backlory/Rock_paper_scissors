@@ -1,4 +1,6 @@
 import os
+import time
+from functools import wraps
 
 def colorstr(*input):
     '''
@@ -27,3 +29,34 @@ def colorstr(*input):
               'bold': '\033[1m',
               'underline': '\033[4m'}
     return ''.join(colors[x] for x in args) + f'{string}' + colors['end']
+
+
+def fun_run_time(func):
+    '''
+    装饰器，用于获取函数的执行时间
+    ''' 
+    @wraps(func)
+    def _inner(*args, **kwargs):
+        s_time = time.time()
+        ret = func(*args, **kwargs)
+        e_time = time.time()
+        #
+        print(colorstr("\t----function [{}] costs {} s".format(func.__name__, e_time-s_time), 'yellow'))
+        return ret
+    return _inner
+
+def tic():
+    '''
+    开始计时。
+    t = tic()
+    '''
+    s_time = time.time()
+    return s_time
+
+def toc(s_time):
+    '''
+    结束计时。
+    toc(t)
+    '''
+    e_time = time.time()
+    print(colorstr("\t----[tic-toc] costs {} s".format(e_time-s_time), 'yellow'))

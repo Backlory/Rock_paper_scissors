@@ -52,8 +52,8 @@ def save_pic(data,filename,filedir = ''):
 def show_pic(data,windowname = 'default',showtype='freeze'):
     '''
     展示三维矩阵图片。
-    show_pic(temp,"r","freeze") 冻结型显示
-    show_pic(temp,"r","freedom")自由型显示
+    show_pic(pic,"asd","freeze") 冻结型显示
+    show_pic(pic,"asd","freedom")自由型显示
     '''
     assert (len(data.shape)==3) 
     assert (data.shape[0] ==1 or data.shape[0] == 3)    #通道数，高，宽
@@ -78,7 +78,7 @@ def show_pic(data,windowname = 'default',showtype='freeze'):
     if showtype=='freeze':
         cv2.waitKey(0)
     else:
-        cv2.waitKey(30)
+        cv2.waitKey(3000)
 
 
 def _check_image(imgs):

@@ -10,7 +10,10 @@
 import utils.structure_trans as u_st
 import numpy as np
 from utils.tools import colorstr
+from utils.tools import fun_run_time
 
+
+@fun_run_time
 def Preprosessing(PSR_Dataset, funclist = []):
     '''
     输入：数据集对象，一系列预处理函数
@@ -23,7 +26,8 @@ def Preprosessing(PSR_Dataset, funclist = []):
     PSR_Dataset_img = []
     PSR_Dataset_label = []
     #
-    readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
+    #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
+    readlist = range(len(PSR_Dataset))
     readlist_len = len(readlist)
     for i,readidx in enumerate(readlist):
         img, label = PSR_Dataset[readidx]
