@@ -4,7 +4,7 @@ def colorstr(*input):
     '''
     输入一串字符和格式，用欧逗号隔开。默认是蓝色加粗。
     eg. 
-    colorstr('blue', 'hello world')
+    colorstr('helloworld', 'blue')
     '''
     string, *args = input if len(input) > 1 else (input[0], 'blue', 'bold')  # color arguments, string
     colors = {'black': '\033[30m',  # basic colors

@@ -56,9 +56,11 @@ def laplian_image(image):
             expand = cv2.pyrUp(pyramid_images[i], dstsize=pyramid_images[i-1].shape[:2])
             lpls = cv2.subtract(pyramid_images[i-1], expand)
             cv2.imshow("拉普拉斯"+str(i), lpls)
- 
+
+'''
 src = cv2.imread("C://01.jpg")
 cv2.imshow("原来", src)
 laplian_image(src)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+'''

@@ -41,7 +41,10 @@ def save_pic(data,filename,filedir = ''):
     
     try:  
         prepare_path(filedir)
-        img.save( './'+ filedir +'/' + filename + '.png')  #【】【】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】
+        temp = './'+ filedir +'/' + filename + '.png'
+        img.save(temp)  #【】【】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】
+        from utils.tools import colorstr
+        print(f'image saved in {temp}')
     except:
         print('file dir error')
 
