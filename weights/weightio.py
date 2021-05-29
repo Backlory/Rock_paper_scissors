@@ -78,12 +78,12 @@ if __name__ == "__main__":
     t=tic()
     print('\tusing joblib (40000000 length array)')
     print('\t\tsaving',end='')
-    save_obj(a, 'weights\\2.joblib')
+    save_obj(a, 'weights\\2.model')
     toc(t)
     
     t=tic()
     print('\t\tloading',end='')
-    model1 = load_obj('weights\\2.joblib')
+    model1 = load_obj('weights\\2.model')
     toc(t)
     print(model1.name)
 
@@ -91,12 +91,12 @@ if __name__ == "__main__":
     print('\tusing pickle (40000000 length array)')
     
     print('\t\tsaving',end='')
-    save_obj_pickle(a, 'weights\\1.pickle')
+    save_obj_pickle(a, 'weights\\1.model')
     toc(t)
     
     t=tic()
     print('\t\tloading',end='')
-    b = load_obj_pickle('weights\\1.pickle')
+    b = load_obj_pickle('weights\\1.model')
     toc(t)
 
 
