@@ -16,19 +16,16 @@ if __name__ =='__main__':
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data')
+    disp_sample_list = random.sample(range(len(PSR_Dataset)), 64)
     
     # 数据预处理
-    PSR_Dataset_img, PSR_Dataset_label = Preprosessing(PSR_Dataset)
+    PSR_Dataset_img, PSR_Dataset_label = Preprosessing(PSR_Dataset,
+                                                        [], 
+                                                        savesample=True, 
+                                                        timenow=timenow, 
+                                                        disp_sample_list=disp_sample_list)
 
     # 保存样例图片
-    t=tic()
-    temp = PSR_Dataset_img[random.sample(range(PSR_Dataset_img.shape[0]), 64), :, :, :]
-    temp = u_idsip.img_square(temp)
-    toc(t)
-    #u_idsip.show_pic(temp,'temp','freedom')
-    t=tic()
-    u_idsip.save_pic(temp, 'temp', 'experiment/'+ timenow +'/')
-    toc(t)
 
     # ROI提取
     # 特征提取

@@ -7,14 +7,17 @@
 # 灰度世界算法
 # HE
 # CLAHE
-import utils.structure_trans as u_st
+import random
 import numpy as np
+
+import utils.structure_trans as u_st
+import utils.img_display as u_idsip
 from utils.tools import colorstr
 from utils.tools import fun_run_time
 
 
 @fun_run_time
-def Preprosessing(PSR_Dataset, funclist = []):
+def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp_sample_list=[]):
     '''
     输入：数据集对象，一系列预处理函数
 
@@ -23,32 +26,38 @@ def Preprosessing(PSR_Dataset, funclist = []):
     print(colorstr('='*50, 'red'))
     print(colorstr('Preprocess begin.'))
     #
+    #加载数据
     PSR_Dataset_img = []
     PSR_Dataset_label = []
-    #
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
     readlist = range(len(PSR_Dataset))
     readlist_len = len(readlist)
     for i,readidx in enumerate(readlist):
         img, label = PSR_Dataset[readidx]
         img = u_st.cv2numpy(img)    #channal, height, width
-        #
-        if funclist is not []:
-            for func in funclist:
-                img = func(img)
-        #
         PSR_Dataset_img.append(img)
         PSR_Dataset_label.append(label)
         if i % int(readlist_len/10) == int(readlist_len/10)-1:
             print(f'\t{i+1}/{readlist_len} has been preprocessed...')
     #
-    #PSR_Dataset_img = PSR_Dataset_img[0:120] + PSR_Dataset_img[840:960] + PSR_Dataset_img[1680:1800]
-    #PSR_Dataset_label = PSR_Dataset_label[0:120] + PSR_Dataset_label[840:960] + PSR_Dataset_label[1680:1800]
+    #转成四维张量
     PSR_Dataset_img = np.array(PSR_Dataset_img)
     PSR_Dataset_label = np.array(PSR_Dataset_label)
-    #
     print('shapes of images and label:')
     print(PSR_Dataset_img.shape)
     print(PSR_Dataset_label.shape)
+    #
+    #按顺序做预处理
+    if funclist is not []:
+        for func in funclist:
+            img = func(img)
+        if savesample:
+            u_idsip.save_pic(temp, str(func.__name__), 'experiment/'+ timenow +'/')
+
+
+    if savesample:
+        temp = u_idsip.img_square(PSR_Dataset_img[disp_sample_list, :, :, :])
+        u_idsip.save_pic(temp, 'after_proprecess', 'experiment/'+ timenow +'/')
+
     print(colorstr('Preprocess finish.'))
     return PSR_Dataset_img, PSR_Dataset_label
