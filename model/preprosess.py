@@ -39,7 +39,7 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
         PSR_Dataset_label.append(label)
         if i % int(readlist_len/10) == int(readlist_len/10)-1:
             print(f'\t{i+1}/{readlist_len} has been preprocessed...')
-    toc(t,'data load')
+    toc(t,'data load', readlist_len)
     #
     #转成四维张量
     t=tic()
@@ -82,6 +82,7 @@ def median_blur(imgs, arg):
     for idx, img in enumerate(imgs):
         dst = cv2.medianBlur(img, size)
         imgs_processed[idx, :, :, :] = dst
+    #
     imgs_processed = u_st.cv2numpy(imgs_processed)
     return imgs_processed
 

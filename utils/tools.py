@@ -53,10 +53,10 @@ def tic():
     s_time = time.time()
     return s_time
 
-def toc(s_time, word='tic-toc'):
+def toc(s_time, word='tic-toc', number = 1):
     '''
     结束计时。
     toc(t)
     '''
     e_time = time.time()
-    print(colorstr(f"\t----module [{word}] costs {e_time-s_time} s", 'yellow'))
+    print(colorstr(f"\t----module [{word}] costs {(e_time-s_time)} ms, for {number} actions, ({(e_time-s_time)/number*1000}ms/action)", 'yellow'))
