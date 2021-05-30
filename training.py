@@ -27,7 +27,6 @@ if __name__ =='__main__':
                                                             timenow = timenow, 
                                                             disp_sample_list = disp_sample_list)
 
-    # 保存样例图片
 
     # ROI提取
     # 特征提取

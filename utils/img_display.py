@@ -20,7 +20,7 @@ def prepare_path(name_dir):
         os.system('mkdir -p ' +name_dir)
     return 1
 
-@fun_run_time
+#@fun_run_time
 def save_pic(data,filename,filedir = ''):
     '''
     将三维RGB data保存成png图片。
