@@ -25,6 +25,8 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
     '''
     print(colorstr('='*50, 'red'))
     print(colorstr('Preprocess begin.'))
+    if savesample and ( timenow=='' or disp_sample_list==[]):
+        raise(ValueError('timenow and disp_sample_list not given.'))
     #
     #加载数据
     PSR_Dataset_img = []
@@ -46,18 +48,18 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
     print('shapes of images and label:')
     print(PSR_Dataset_img.shape)
     print(PSR_Dataset_label.shape)
-    #
-    #按顺序做预处理
-    if funclist is not []:
-        for func in funclist:
-            img = func(img)
-        if savesample:
-            u_idsip.save_pic(temp, str(func.__name__), 'experiment/'+ timenow +'/')
-
-
     if savesample:
         temp = u_idsip.img_square(PSR_Dataset_img[disp_sample_list, :, :, :])
-        u_idsip.save_pic(temp, 'after_proprecess', 'experiment/'+ timenow +'/')
+        u_idsip.save_pic(temp, 'original_image', 'experiment/'+ timenow +'/')
+    #
+    #按顺序做预处理
+    if funclist != []:
+        for func in funclist:
+            PSR_Dataset_img = func(PSR_Dataset_img)
+            if savesample:
+                temp = u_idsip.img_square(PSR_Dataset_img[disp_sample_list, :, :, :])
+                u_idsip.save_pic(temp, str(func.__name__), 'experiment/'+ timenow +'/')
 
+    #处理结束
     print(colorstr('Preprocess finish.'))
     return PSR_Dataset_img, PSR_Dataset_label
