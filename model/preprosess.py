@@ -1,18 +1,11 @@
 # 预处理部分。（pic3->pic3)
-
-# TODO: 
-# 高斯低通滤波 GaussianBlur(img, ksize=5, sigma=0)
-# 中值滤波     MidBlur
-# 非线性变换   
-# 灰度世界算法
-# HE
-# CLAHE
+import cv2
 import random
 import numpy as np
 
 import utils.structure_trans as u_st
 import utils.img_display as u_idsip
-from utils.tools import colorstr
+from utils.tools import colorstr, tic, toc   
 from utils.tools import fun_run_time
 
 
@@ -29,6 +22,7 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
         raise(ValueError('timenow and disp_sample_list not given.'))
     #
     #加载数据
+    t=tic()
     PSR_Dataset_img = []
     PSR_Dataset_label = []
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
@@ -41,8 +35,10 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
         PSR_Dataset_label.append(label)
         if i % int(readlist_len/10) == int(readlist_len/10)-1:
             print(f'\t{i+1}/{readlist_len} has been preprocessed...')
+    toc(t,'data load')
     #
     #转成四维张量
+    t=tic()
     PSR_Dataset_img = np.array(PSR_Dataset_img)
     PSR_Dataset_label = np.array(PSR_Dataset_label)
     print('shapes of images and label:')
@@ -51,6 +47,7 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
     if savesample:
         temp = u_idsip.img_square(PSR_Dataset_img[disp_sample_list, :, :, :])
         u_idsip.save_pic(temp, 'original_image', 'experiment/'+ timenow +'/')
+    toc(t,'list2numpy')
     #
     #按顺序做预处理
     if funclist != []:
@@ -63,3 +60,23 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
     #处理结束
     print(colorstr('Preprocess finish.'))
     return PSR_Dataset_img, PSR_Dataset_label
+
+
+# 中值滤波     MidBlur
+@fun_run_time
+def median_blur(imgs, size=(5)):    
+    ''' 
+    中值模糊  对椒盐噪声有很好的去燥效果
+    '''
+    imgs_processed = np.zeros_like(imgs)
+    for idx, img in enumerate(imgs):
+        dst = cv2.medianBlur(img, size)
+        imgs_processed[idx, :, :, :] = dst
+    return imgs_processed
+
+# TODO: 
+# 高斯低通滤波 GaussianBlur(img, ksize=5, sigma=0)
+# 非线性变换   
+# 灰度世界算法
+# HE
+# CLAHE

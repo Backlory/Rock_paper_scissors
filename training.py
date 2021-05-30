@@ -7,7 +7,7 @@ from datetime import datetime
 import utils.img_display as u_idsip
 from utils.tools import tic, toc
 
-from model.preprosess import Preprosessing
+import model.preprosess as m_pp
 
 
 if __name__ =='__main__':
@@ -19,11 +19,11 @@ if __name__ =='__main__':
     disp_sample_list = random.sample(range(len(PSR_Dataset)), 64)
     
     # 数据预处理
-    PSR_Dataset_img, PSR_Dataset_label = Preprosessing(PSR_Dataset,
-                                                        [], 
-                                                        savesample=True, 
-                                                        timenow=timenow, 
-                                                        disp_sample_list=disp_sample_list)
+    PSR_Dataset_img, PSR_Dataset_label = m_pp.Preprosessing(PSR_Dataset,
+                                                        [m_pp.median_blur], 
+                                                        savesample = True, 
+                                                        timenow = timenow, 
+                                                        disp_sample_list = disp_sample_list)
 
     # 保存样例图片
 
