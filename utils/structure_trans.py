@@ -11,7 +11,7 @@ def gray2ggg(img):
 
 def cv2numpy(img):
     '''
-    将CV图片转换为numpy矩阵。
+    将CV图片转换为numpy矩阵,RGB。
     输入（32，32，3），输出（3，32，32）
     输入（1500, 32，32，3），输出（1500, 3，32，32）
     '''
@@ -22,7 +22,18 @@ def cv2numpy(img):
         assert(img.shape[3] == 1 or img.shape[3] == 3)
         return np.transpose(img,(0,3,1,2))
  
- 
+def numpy2cv(img):
+    '''
+    将numpy矩阵转换为CV图片。
+    输入（3，32，32），输出（32，32，3）
+    输入（1500, 3，32，32），输出（1500, 32，32，3）
+    '''
+    if len(img.shape) == 3:
+        assert(img.shape[0] == 1 or img.shape[0] == 3)
+        return np.transpose(img,(1,2,0))
+    else:
+        assert(img.shape[1] == 1 or img.shape[1] == 3)
+        return np.transpose(img,(0,2,3,1))
 
 def img2GaussianPyramid(img, level=3):
     '''

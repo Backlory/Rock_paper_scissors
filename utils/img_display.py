@@ -4,6 +4,7 @@ import cv2
 import os,sys
 
 from .structure_trans import gray2ggg
+from .tools import fun_run_time
 
 
 def prepare_path(name_dir):
@@ -19,10 +20,10 @@ def prepare_path(name_dir):
         os.system('mkdir -p ' +name_dir)
     return 1
 
-
+@fun_run_time
 def save_pic(data,filename,filedir = ''):
     '''
-    将三维data保存成png图片。
+    将三维RGB data保存成png图片。
     save_pic(temp,'1','test/test1')，
     '''
     assert (len(data.shape)==3) #channels, height, width
@@ -43,14 +44,14 @@ def save_pic(data,filename,filedir = ''):
         prepare_path(filedir)
         temp = './'+ filedir + filename + '.png'
         img.save(temp)  #【】【】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】
-        print(f'image saved in {temp}')
+        print(f'\t\timage saved in {temp}')
     except:
-        print('file dir error')
+        print('\t\tfile dir error')
 
 
 def show_pic(data,windowname = 'default',showtype='freeze'):
     '''
-    展示三维矩阵图片。
+    展示三维RGB矩阵图片。
     show_pic(pic,"asd","freeze") 冻结型显示
     show_pic(pic,"asd","freedom")自由型显示
     '''

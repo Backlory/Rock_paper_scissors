@@ -25,11 +25,15 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
     t=tic()
     PSR_Dataset_img = []
     PSR_Dataset_label = []
-    #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
-    readlist = range(len(PSR_Dataset))
+    #readlist = range(len(PSR_Dataset))
+
+    readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
+    disp_sample_list = random.sample(range(len(readlist)), 9)
+    
     readlist_len = len(readlist)
     for i,readidx in enumerate(readlist):
         img, label = PSR_Dataset[readidx]
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
         img = u_st.cv2numpy(img)    #channal, height, width
         PSR_Dataset_img.append(img)
         PSR_Dataset_label.append(label)
@@ -51,11 +55,14 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
     #
     #按顺序做预处理
     if funclist != []:
-        for func in funclist:
-            PSR_Dataset_img = func(PSR_Dataset_img)
+        for idx, funcinfo in enumerate(funclist):
+            func = funcinfo[0]
+            args = funcinfo[1]
+
+            PSR_Dataset_img = func(PSR_Dataset_img, args)
             if savesample:
                 temp = u_idsip.img_square(PSR_Dataset_img[disp_sample_list, :, :, :])
-                u_idsip.save_pic(temp, str(func.__name__), 'experiment/'+ timenow +'/')
+                u_idsip.save_pic(temp, str(idx)+'_'+str(func.__name__), 'experiment/'+ timenow +'/')
 
     #处理结束
     print(colorstr('Preprocess finish.'))
@@ -64,19 +71,23 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
 
 # 中值滤波     MidBlur
 @fun_run_time
-def median_blur(imgs, size=(5)):    
+def median_blur(imgs, arg):    
     ''' 
-    中值模糊  对椒盐噪声有很好的去燥效果
+    中值模糊  对椒盐噪声有去燥效果
     '''
+    size=arg[0]
+    #
+    imgs = u_st.numpy2cv(imgs)
     imgs_processed = np.zeros_like(imgs)
     for idx, img in enumerate(imgs):
         dst = cv2.medianBlur(img, size)
         imgs_processed[idx, :, :, :] = dst
+    imgs_processed = u_st.cv2numpy(imgs_processed)
     return imgs_processed
 
 # TODO: 
 # 高斯低通滤波 GaussianBlur(img, ksize=5, sigma=0)
-# 非线性变换   
+# 非线性变换
 # 灰度世界算法
 # HE
 # CLAHE

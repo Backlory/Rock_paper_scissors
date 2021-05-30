@@ -16,14 +16,16 @@ if __name__ =='__main__':
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data')
-    disp_sample_list = random.sample(range(len(PSR_Dataset)), 64)
+    disp_sample_list = random.sample(range(len(PSR_Dataset)), 9) #9,16,64
     
     # 数据预处理
+    funlist=[]
+    funlist.append([m_pp.median_blur, [3]])
     PSR_Dataset_img, PSR_Dataset_label = m_pp.Preprosessing(PSR_Dataset,
-                                                        [m_pp.median_blur], 
-                                                        savesample = True, 
-                                                        timenow = timenow, 
-                                                        disp_sample_list = disp_sample_list)
+                                                            funlist, 
+                                                            savesample = True, 
+                                                            timenow = timenow, 
+                                                            disp_sample_list = disp_sample_list)
 
     # 保存样例图片
 
