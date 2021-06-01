@@ -35,6 +35,15 @@ def numpy2cv(img):
         assert(img.shape[1] == 1 or img.shape[1] == 3)
         return np.transpose(img,(0,2,3,1))
 
+def _check_imgs(imgs):
+    '''
+    检查图片组。
+    '''
+    assert(len(imgs.shape) == 4)
+    assert (imgs.shape[1] == 1 or imgs.shape[1] == 3) #号*channal*高*宽
+    assert(np.max(imgs) > 1)#255.
+    return 1
+
 def img2GaussianPyramid(img, level=3):
     '''
     输入图像，输出高斯金字塔

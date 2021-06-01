@@ -7,7 +7,9 @@ from datetime import datetime
 import utils.img_display as u_idsip
 from utils.tools import tic, toc
 
+
 import model.preprosess as m_pp
+import model.ROI_extract as m_Re
 
 
 if __name__ =='__main__':
@@ -16,7 +18,7 @@ if __name__ =='__main__':
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data')
-    disp_sample_list = random.sample(range(len(PSR_Dataset)), 9) #9,16,64
+    disp_sample_list = random.sample(range(len(PSR_Dataset)), 16) #9,16,64
     
     # 数据预处理
     funlist=[]
@@ -26,9 +28,14 @@ if __name__ =='__main__':
                                                             savesample = True, 
                                                             timenow = timenow, 
                                                             disp_sample_list = disp_sample_list)
-
-
     # ROI提取
+    funlist=[]
+    funlist.append([m_Re.threshold_expend, [20]])
+    PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
+                                        funlist,
+                                        savesample = True, 
+                                        timenow = timenow, 
+                                        disp_sample_list = disp_sample_list)
     # 特征提取
     # 特征编码
     # 训练集分割
