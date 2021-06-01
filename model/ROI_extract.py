@@ -13,7 +13,7 @@ from utils.tools import fun_run_time
 
 
 @fun_run_time
-def ROIextractor(PSR_Dataset_img, funclist = [], savesample=False, timenow='', disp_sample_list=[]):
+def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_sample_list=[]):
     '''
     输入：4d图片集，(num, c, h, w)
 
@@ -25,54 +25,70 @@ def ROIextractor(PSR_Dataset_img, funclist = [], savesample=False, timenow='', d
         raise(ValueError('timenow and disp_sample_list not given.'))
     #
     #按顺序做预处理
-    if funclist != []:
-        for idx, funcinfo in enumerate(funclist):
-            func = funcinfo[0]
-            args = funcinfo[1]
+    PSR_Dataset_img_pred = PSR_Dataset_img.copy()
+    filedir = 'experiment/'+ timenow +'/'
+    if mode == 0:
+        #三通道转HSV，取V通道后OTSU
+        mask = rgb2HSV(PSR_Dataset_img)
+        mask = mask[:,2,:,:]
+        mask = mask[:,np.newaxis,:,:]        
+        if savesample: u_idsip.save_pic(u_idsip.img_square(mask[disp_sample_list, :, :, :]), '01_rgb2HSV', filedir)
 
-            PSR_Dataset_img = func(PSR_Dataset_img, args)
-            if savesample:
-                temp = u_idsip.img_square(PSR_Dataset_img[disp_sample_list, :, :, :])
-                u_idsip.save_pic(temp, str(idx)+'_'+str(func.__name__), 'experiment/'+ timenow +'/')
+        mask = threshold_OTSU(mask) 
+        PSR_Dataset_img_pred[:,0,:,:] = np.where(mask==255, 0, PSR_Dataset_img[:,0,:,:])
+        PSR_Dataset_img_pred[:,1,:,:] = np.where(mask==255, 0, PSR_Dataset_img[:,1,:,:])
+        PSR_Dataset_img_pred[:,2,:,:] = np.where(mask==255, 0, PSR_Dataset_img[:,2,:,:])
+
+        if savesample:
+            temp = u_idsip.img_square(PSR_Dataset_img_pred[disp_sample_list, :, :, :])
+            u_idsip.save_pic(temp, '01_rgb2HSV', 'experiment/'+ timenow +'/')
 
     #处理结束
-    return PSR_Dataset_img
+    return PSR_Dataset_img_pred
+
 
 
 @fun_run_time
-def rgb2gray(imgs, arg=[]):
-    '''矩阵降维，由多通道变为单通道'''
+def rgb2HSV(imgs):
+    '''rgb转HSV'''
     u_st._check_imgs(imgs)
     imgs = u_st.numpy2cv(imgs)
     #
     num, h, w, c = imgs.shape
-    imgs_new = np.zeros((num, h, w, 1), dtype=np.uint8)
+    imgs_new = np.zeros((num, h, w, 3), dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        imgs_new[idx, :, :, 0] = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        imgs_new[idx, :, :, :] = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     #
     imgs_new = u_st.cv2numpy(imgs_new)
     u_st._check_imgs(imgs_new)
-    return imgs_new 
+    return imgs_new
 
-
-# 大津阈值法
 @fun_run_time
-def threshold_expend(imgs, arg=[], thres=127):    
-    ''' 
-    先对原图固定阈值分割，得到遮罩，然后
-    '''
-    thres=arg[0]
+def three2one(imgs, channal=0):
+    '''三通道转单通道'''
     u_st._check_imgs(imgs)
-    masks = rgb2gray(imgs)  #n 1 h w
     imgs = u_st.numpy2cv(imgs)
-    masks = u_st.numpy2cv(masks)
+    #
+    imgs = imgs[:,:,:,channal]
+    imgs_new = imgs[:,:,:,np.newaxis]
+    #
+    imgs_new = u_st.cv2numpy(imgs_new)
+    u_st._check_imgs(imgs_new)
+    return imgs_new
+
+#V通道大津阈值法
+@fun_run_time
+def threshold_OTSU(imgs):
+    ''' 
+    对单通道原图大津阈值分割
+    '''
+    u_st._check_imgs(imgs) #[num, c, h, w]
+    imgs = u_st.numpy2cv(imgs)
     #
     imgs_new = np.zeros_like(imgs, dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        _, temp = cv2.threshold(masks[idx], thres, 255, cv2.THRESH_BINARY) 
-        imgs_new[idx, :, :, 0] = np.where(temp==255, 0, img[:,:,0]) #255白
-        imgs_new[idx, :, :, 1] = np.where(temp==255, 0, img[:,:,1])
-        imgs_new[idx, :, :, 2] = np.where(temp==255, 0, img[:,:,2])
+        _, dst = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
+        imgs_new[idx,0,:,:] = dst
     #
     imgs_new = u_st.cv2numpy(imgs_new)
     u_st._check_imgs(imgs_new)

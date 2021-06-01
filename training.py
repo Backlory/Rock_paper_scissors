@@ -31,10 +31,9 @@ if __name__ =='__main__':
                                                             timenow = timenow, 
                                                             disp_sample_list = disp_sample_list)
     # ROI提取
-    funlist=[]
-    funlist.append([m_Re.threshold_expend, [240]])
+    mode=0
     PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
-                                        funlist,
+                                        mode,
                                         savesample = True, 
                                         timenow = timenow, 
                                         disp_sample_list = disp_sample_list)
