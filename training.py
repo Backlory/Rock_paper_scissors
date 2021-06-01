@@ -18,19 +18,21 @@ if __name__ =='__main__':
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data')
-    disp_sample_list = random.sample(range(len(PSR_Dataset)), 16) #9,16,64
+    readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
+    disp_sample_list = random.sample(range(len(readlist)), 16) #9,16,64
     
     # 数据预处理
     funlist=[]
     funlist.append([m_pp.median_blur, [3]])
     PSR_Dataset_img, PSR_Dataset_label = m_pp.Preprosessing(PSR_Dataset,
+                                                            readlist,
                                                             funlist, 
                                                             savesample = True, 
                                                             timenow = timenow, 
                                                             disp_sample_list = disp_sample_list)
     # ROI提取
     funlist=[]
-    funlist.append([m_Re.threshold_expend, [20]])
+    funlist.append([m_Re.threshold_expend, [240]])
     PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
                                         funlist,
                                         savesample = True, 

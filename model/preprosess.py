@@ -10,7 +10,7 @@ from utils.tools import fun_run_time
 
 
 @fun_run_time
-def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp_sample_list=[]):
+def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, timenow='', disp_sample_list=[]):
     '''
     输入：数据集对象，一系列预处理函数
 
@@ -25,7 +25,6 @@ def Preprosessing(PSR_Dataset, funclist = [], savesample=False, timenow='', disp
     t=tic()
     PSR_Dataset_img = []
     PSR_Dataset_label = []
-    readlist = range(len(PSR_Dataset))
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
     #disp_sample_list = random.sample(range(len(readlist)), 9)
     
@@ -77,7 +76,7 @@ def median_blur(imgs, arg, size=3):
     u_st._check_imgs(imgs)
     imgs = u_st.numpy2cv(imgs)
     #
-    imgs_new = np.zeros_like(imgs)
+    imgs_new = np.zeros_like(imgs,  dtype=np.uint8)
     for idx, img in enumerate(imgs):
         dst = cv2.medianBlur(img, size)
         imgs_new[idx, :, :, :] = dst

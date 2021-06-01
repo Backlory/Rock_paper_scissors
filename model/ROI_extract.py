@@ -46,7 +46,7 @@ def rgb2gray(imgs, arg=[]):
     imgs = u_st.numpy2cv(imgs)
     #
     num, h, w, c = imgs.shape
-    imgs_new = np.zeros((num, h, w, 1))
+    imgs_new = np.zeros((num, h, w, 1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
         imgs_new[idx, :, :, 0] = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     #
@@ -65,14 +65,14 @@ def threshold_expend(imgs, arg=[], thres=127):
     u_st._check_imgs(imgs)
     masks = rgb2gray(imgs)  #n 1 h w
     imgs = u_st.numpy2cv(imgs)
+    masks = u_st.numpy2cv(masks)
     #
-
-    imgs_new = np.zeros_like(imgs)
+    imgs_new = np.zeros_like(imgs, dtype=np.uint8)
     for idx, img in enumerate(imgs):
         _, temp = cv2.threshold(masks[idx], thres, 255, cv2.THRESH_BINARY) 
-        imgs_new[idx, :, :, 0] = np.where(temp[:,:,0]==0, 0, img[:,:,0])
-        imgs_new[idx, :, :, 1] = np.where(temp[:,:,0]==0, 0, img[:,:,1])
-        imgs_new[idx, :, :, 2] = np.where(temp[:,:,0]==0, 0, img[:,:,2])
+        imgs_new[idx, :, :, 0] = np.where(temp==255, 0, img[:,:,0]) #255白
+        imgs_new[idx, :, :, 1] = np.where(temp==255, 0, img[:,:,1])
+        imgs_new[idx, :, :, 2] = np.where(temp==255, 0, img[:,:,2])
     #
     imgs_new = u_st.cv2numpy(imgs_new)
     u_st._check_imgs(imgs_new)
