@@ -50,7 +50,7 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
     if savesample:
         temp = PSR_Dataset_img[disp_sample_list, :, :, :]
         temp = u_idsip.img_square(temp)
-        u_idsip.save_pic(temp, 'original_image', 'experiment/'+ timenow +'/')
+        u_idsip.save_pic(temp, '00_original_image', 'experiment/'+ timenow +'/')
     #
     #按顺序做预处理
     if funclist != []:
@@ -124,13 +124,13 @@ def equalizeHist(imgs, arg=[],type='CLAHE'):
     #
     imgs_new = np.zeros_like(imgs,  dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+        img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         if type == 'HE':
-            img_yuv[:, :, 0] = cv2.equalizeHist(img_yuv[:, :, 0])
+            img_hsv[:, :, 0] = cv2.equalizeHist(img_hsv[:, :, 0])
         elif type == 'CLAHE':
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-            dst = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+            img_hsv[:, :, 0] = clahe.apply(img_hsv[:, :, 0])
+        dst = cv2.cvtColor(img_hsv, cv2.COLOR_YUV2BGR)
         
         imgs_new[idx, :, :, :] = dst
     #
@@ -138,56 +138,41 @@ def equalizeHist(imgs, arg=[],type='CLAHE'):
     u_st._check_imgs(imgs_new)
     return imgs_new
 
-#二维伽马函数的光照不均匀的图像自适应校正
-
 @fun_run_time
-def gamma2D(imgs, arg=[],):    
+def ad_exp_trans(imgs, arg=[],series=2):
     ''' 
-    转到YUV空间，在Y通道均衡，
+    基于高斯模糊的自适应指数变换串联，可消除光照不均衡阴影
+    输入图片，串联等级(一般2)
     '''
+    series=arg[0]
     u_st._check_imgs(imgs)
     imgs = u_st.numpy2cv(imgs)
     #
-    HSIZE = 25
-    q = 2**0.5
-    SIGMA1 = 15
-    SIGMA2 = 80
-    SIGMA3 = 250
     imgs_new = np.zeros_like(imgs,  dtype=np.uint8)
     for idx, img in enumerate(imgs):
+        #
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
-        
-        F1 = cv2.GaussianBlur(v, (HSIZE, HSIZE), SIGMA1 / q, HSIZE)*1.0 # 对亮度v通道进行不同参数的高斯滤波
-        F2 = cv2.GaussianBlur(v, (HSIZE, HSIZE), SIGMA2 / q, HSIZE)*1.0
-        F3 = cv2.GaussianBlur(v, (HSIZE, HSIZE), SIGMA3 / q, HSIZE)*1.0
-        gaus = (F1 + F2 + F3) / 3 # 取每个滤波后的平均值
-        gaus = np.array(gaus, dtype=np.uint8)
+        v = v / 255.0
 
-        cv2.imshow('gaus.jpg', gaus)
-        cv2.waitKey(0)
-        
-        m = np.mean(gaus) # 获取亮度通道的平均值，便于跟原亮度进行比较
-        w, height = np.shape(v) # 获取亮度通道的宽和高
-        out = np.zeros(np.size(v))
-        
-        gama = np.power(0.5, ((m - gaus) / m)) # 进行gama变换
-        out = (np.power(v, gama))
-        
-        cv2.imshow('out.jpg', out)
-        cv2.waitKey(0)
-        
-        hsv = cv2.merge([h, s, out])
+        for i in range(series):
+            gaus = cv2.GaussianBlur(v, (21, 21), 1)*1.0
+            gaus2 = cv2.GaussianBlur(v, (21, 21), 100)*1.0
+            gaus_diff = gaus-gaus2+0.5
+            gaus_diff = np.array(gaus_diff*255, np.uint8)
+            gaus_median = np.median(gaus_diff.flatten())
+            gaus_median = (gaus_median-127)/255.0
+            gaus_median+= np.mean(gaus2)
+            #u_idsip.show_pic(gama[np.newaxis,:,:],windowname='3',showtype='freedom')
+            gama = np.power(0.5, (1 - gaus/gaus_median)) # 进行gama变换
+
+            v = np.power(v, gama)
+            v = np.array(v*255, dtype=np.uint8)
+
+        hsv = cv2.merge([h, s, v])
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        cv2.imshow('output.jpg', rgb)
-        cv2.waitKey(0)
-        
-        rgb = rgb / rgb.max()
-        rgb = 255 * rgb
-        rgb = rgb.astype(np.uint8)
-        cv2.imshow('output2.jpg', rgb)
-        cv2.waitKey(0)
 
+        
 
         imgs_new[idx, :, :, :] = rgb
     #
