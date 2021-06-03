@@ -1,4 +1,5 @@
 # 预处理部分。（pic3->pic3)
+import math
 import cv2
 import random
 import numpy as np
@@ -23,15 +24,19 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
     #
     #加载数据
     t=tic()
+    temp, _ = PSR_Dataset[0]
+    h_std,w_std,_=temp.shape
     PSR_Dataset_img = []
     PSR_Dataset_label = []
-    #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
-    #disp_sample_list = random.sample(range(len(readlist)), 9)
-    
     readlist_len = len(readlist)
     for i,readidx in enumerate(readlist):
         img, label = PSR_Dataset[readidx]
         img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+        h, w, _ = img.shape
+
+        if h != h_std or w != w_std:
+            img = cv2.resize(img, (h_std,w_std))
+        
         img = u_st.cv2numpy(img)    #channal, height, width
         PSR_Dataset_img.append(img)
         PSR_Dataset_label.append(label)
@@ -142,32 +147,51 @@ def equalizeHist(imgs, arg=[],type='CLAHE'):
     return imgs_new
 
 @fun_run_time
-def ad_exp_trans(imgs, arg=[],series=2):
+def ad_exp_trans(imgs, arg=[]):
     ''' 
-    基于高斯模糊的自适应指数变换串联，可消除光照不均衡阴影
+    基于高斯模糊的自适应指数变换，消除光照不均衡阴影
     输入图片，串联等级(一般2)
     '''
-    series=arg[0]
     u_st._check_imgs(imgs)
     imgs = u_st.numpy2cv(imgs)
     #
     imgs_new = np.zeros_like(imgs,  dtype=np.uint8)
     for idx, img in enumerate(imgs):
         #
+        temp = cv2.resize(img, (128,128))       #纹理复杂度计算
+        temp = cv2.GaussianBlur(temp, (5, 5), 100)
+        #u_idsip.show_pic(u_st.cv2numpy(temp))
+        temp = cv2.Canny(temp, 10, 200)
+        #u_idsip.show_pic(temp)
+        temp = np.mean(temp.flatten())/2.55
+        temp = 0.2983*math.log(temp)+0.302    #拟合结果
+        alpha_base = np.clip(temp, 0.5, 0.99)
+        #print(alpha_base)
+        
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
         v = v / 255.0
-
-        for i in range(series):
-            gaus = cv2.GaussianBlur(v, (21, 21), 1)*1.0
-            gaus2 = cv2.GaussianBlur(v, (21, 21), 100)*1.0
-            gaus_diff = gaus-gaus2+0.5
-            gaus_diff = np.array(gaus_diff*255, np.uint8)
-            gaus_median = np.median(gaus_diff.flatten())
-            gaus_median = (gaus_median-127)/255.0
-            gaus_median+= np.mean(gaus2)
-            alpha = np.power(0.5, (1 - gaus/gaus_median)) # 进行gama变换
+        for i in range(3):
+            
+            gaus = cv2.GaussianBlur(v, (21, 21), 100, 21)*1.0
+            gaus_median = np.mean(gaus)
+            alpha = np.power(alpha_base, (1 - gaus/gaus_median)) # 进行指数变换
             v = np.power(v, alpha)
+
+            # 对亮度v通道进行不同参数的高斯滤波
+            '''
+            HSIZE = 25
+            q = 2**0.5
+            F1 = cv2.GaussianBlur(v, (HSIZE, HSIZE), 15 / q, HSIZE)
+            F2 = cv2.GaussianBlur(v, (HSIZE, HSIZE), 80 / q, HSIZE)
+            F3 = cv2.GaussianBlur(v, (HSIZE, HSIZE), 250 / q, HSIZE)
+            gaus = (F1 + F2 + F3) / 3
+            m = np.mean(gaus)
+            w, height = np.shape(v)
+            out = np.zeros(np.size(v))
+            gama = np.power(0.5, ((m - gaus) / m))
+            v = (np.power(v, gama))
+            '''
 
         v = np.array(v*255, dtype=np.uint8)
         hsv = cv2.merge([h, s, v])

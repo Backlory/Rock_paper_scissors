@@ -17,17 +17,19 @@ if __name__ =='__main__':
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
     
     # 数据加载
-    PSR_Dataset = data.data_loading.PSR_Dataset('data/data_origin')
+    PSR_Dataset = data.data_loading.PSR_Dataset('data/data_my') # data_origin,  data_my, data_bg
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
     readlist = list(range(len(PSR_Dataset)))
-    disp_sample_list = random.sample(range(len(readlist)), 16) #9,16,64
+    #readlist = list(range(10))
+    
+    disp_sample_list = random.sample(range(len(readlist)), 9) #9,16,64
     
     
     # 数据预处理
     funlist=[]
     funlist.append([m_pp.resize, [(300,300)]])
     funlist.append([m_pp.median_blur, [3]])
-    funlist.append([m_pp.ad_exp_trans, [1]])
+    funlist.append([m_pp.ad_exp_trans, []])
     PSR_Dataset_img, PSR_Dataset_label = m_pp.Preprosessing(PSR_Dataset,
                                                             readlist,
                                                             funlist, 
@@ -36,11 +38,11 @@ if __name__ =='__main__':
                                                             disp_sample_list = disp_sample_list)
     # ROI提取
     mode=0
-    #PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
-    #                                    mode,
-    #                                    savesample = True, 
-    #                                    timenow = timenow, 
-    #                                    disp_sample_list = disp_sample_list)
+    PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
+                                        mode,
+                                        savesample = True, 
+                                        timenow = timenow, 
+                                        disp_sample_list = disp_sample_list)
     # 特征提取
     # 特征编码
     # 训练集分割

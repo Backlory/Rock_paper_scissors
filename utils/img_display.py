@@ -55,7 +55,11 @@ def show_pic(data,windowname = 'default',showtype='freeze'):
     show_pic(pic,"asd","freeze") 冻结型显示
     show_pic(pic,"asd","freedom")自由型显示
     '''
-    assert (len(data.shape)==3) 
+    try:
+        assert (len(data.shape)==3) 
+    except:
+        data = data[np.newaxis, :, :]
+
     assert (data.shape[0] ==1 or data.shape[0] == 3)    #通道数，高，宽
     if np.max(data)<=1: data=data*255.
     data=np.uint8(data)

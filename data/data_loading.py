@@ -9,9 +9,10 @@ class PSR_Dataset(Dataset):
         self.data_labels_list = []
         self.num2label = {  0:'paper',
                             1:'scissors',
-                            2:'rock'
+                            2:'rock',
+                            3:'others'
                             }
-        self.dataset_paths = [os.path.join(dataset_path, label) for label in ['paper','scissors','rock']]
+        self.dataset_paths = [os.path.join(dataset_path, label) for label in ['paper','scissors','rock','others']]
         for idx, dataset_path in enumerate(self.dataset_paths):
             data_path_list = self.get_read_file_list(dataset_path)
             self.data_paths_list = self.data_paths_list + data_path_list
