@@ -93,19 +93,22 @@ def resize(imgs, arg=[], size=(300,300)):
     图像缩放。
     '''
     size=arg[0]
+    #
     u_st._check_imgs(imgs)
-    imgs = u_st.numpy2cv(imgs)
-    #
-    num, h, w, c = imgs.shape
-    h2, w2= size
-    imgs_new = np.zeros((num,h2, w2, c),  dtype=np.uint8)
-    for idx, img in enumerate(imgs):
-        dst = cv2.resize(img, size)
-        imgs_new[idx, :, :, :] = dst
-    #
-    imgs_new = u_st.cv2numpy(imgs_new)
-    u_st._check_imgs(imgs_new)
-    return imgs_new
+    num, c, h, w = imgs.shape
+    h2, w2 = size
+    if h==h2 and w==w2:
+        return imgs
+    else:
+        imgs = u_st.numpy2cv(imgs)
+        imgs_new = np.zeros((num,h2, w2, c),  dtype=np.uint8)
+        for idx, img in enumerate(imgs):
+            dst = cv2.resize(img, size)
+            imgs_new[idx, :, :, :] = dst
+        #
+        imgs_new = u_st.cv2numpy(imgs_new)
+        u_st._check_imgs(imgs_new)
+        return imgs_new
 
 
 # TODO: 
@@ -163,18 +166,16 @@ def ad_exp_trans(imgs, arg=[],series=2):
             gaus_median = np.median(gaus_diff.flatten())
             gaus_median = (gaus_median-127)/255.0
             gaus_median+= np.mean(gaus2)
-            #u_idsip.show_pic(gama[np.newaxis,:,:],windowname='3',showtype='freedom')
-            gama = np.power(0.5, (1 - gaus/gaus_median)) # 进行gama变换
+            alpha = np.power(0.5, (1 - gaus/gaus_median)) # 进行gama变换
+            v = np.power(v, alpha)
 
-            v = np.power(v, gama)
-            v = np.array(v*255, dtype=np.uint8)
-
+        v = np.array(v*255, dtype=np.uint8)
         hsv = cv2.merge([h, s, v])
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-
-        
-
         imgs_new[idx, :, :, :] = rgb
+        
+        if idx % int(len(imgs)/10) == int(len(imgs)/10)-1:
+            print(f'\t{idx+1}/{len(imgs)} has been processed...')
     #
     imgs_new = u_st.cv2numpy(imgs_new)
     u_st._check_imgs(imgs_new)
