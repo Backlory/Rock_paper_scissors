@@ -40,8 +40,9 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
         img = u_st.cv2numpy(img)    #channal, height, width
         PSR_Dataset_img.append(img)
         PSR_Dataset_label.append(label)
-        if i % int(readlist_len/10) == int(readlist_len/10)-1:
-            print(f'\t{i+1}/{readlist_len} has been preprocessed...')
+        if readlist_len >20:
+            if i % int(readlist_len/10) == int(readlist_len/10)-1:
+                print(f'\t{i+1}/{readlist_len} has been preprocessed...')
     toc(t,'data load', readlist_len)
     #
     #转成四维张量
@@ -55,7 +56,7 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
     if savesample:
         temp = PSR_Dataset_img[disp_sample_list, :, :, :]
         temp = u_idsip.img_square(temp)
-        u_idsip.save_pic(temp, '00_original_image', 'experiment/'+ timenow +'/')
+        u_idsip.save_pic(temp, '01_00_original_image', 'experiment/'+ timenow +'/')
     #
     #按顺序做预处理
     if funclist != []:
@@ -197,9 +198,9 @@ def ad_exp_trans(imgs, arg=[]):
         hsv = cv2.merge([h, s, v])
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
         imgs_new[idx, :, :, :] = rgb
-        
-        if idx % int(len(imgs)/10) == int(len(imgs)/10)-1:
-            print(f'\t{idx+1}/{len(imgs)} has been processed...')
+        if len(imgs)>10:
+            if idx % int(len(imgs)/10) == int(len(imgs)/10)-1:
+                print(f'\t{idx+1}/{len(imgs)} has been processed...')
     #
     imgs_new = u_st.cv2numpy(imgs_new)
     u_st._check_imgs(imgs_new)

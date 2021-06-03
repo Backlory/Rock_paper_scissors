@@ -1,10 +1,13 @@
 # ROI区域提取。（pic3->pic1黑白)
 # CV图片通道在第四位，平时numpy都放在第二位的
 # 预处理部分。（pic3->pic3)
+import math
 import cv2
 import random
 import numpy as np
-from numpy.testing._private.utils import tempdir
+from matplotlib import pyplot as plt
+from numpy.lib.index_tricks import ndenumerate
+
 
 import utils.structure_trans as u_st
 import utils.img_display as u_idsip
@@ -28,34 +31,25 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     PSR_Dataset_img_pred = PSR_Dataset_img.copy()
     filedir = 'experiment/'+ timenow +'/'
     if mode == 0:
-        #三通道转HSV，取V通道后OTSU
-        masks = rgb2HSV(PSR_Dataset_img)
-        #masks = rgb2YCrCb(PSR_Dataset_img)
+        #基于椭圆肤色模型
+        masks = segskin_ellipse_mask(PSR_Dataset_img)
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
         
-        
-        temp = masks[:,0,:,:]
-        temp = temp[:,np.newaxis,:,:]        
-        if savesample: u_idsip.save_pic(u_idsip.img_square(temp[disp_sample_list, :, :, :]), '02_01_0', filedir)
-        temp = threshold_OTSU(temp) 
-        if savesample: u_idsip.save_pic(u_idsip.img_square(temp[disp_sample_list, :, :, :]), '02_01_0-bw', filedir)
-
-        temp = masks[:,1,:,:]
-        temp = temp[:,np.newaxis,:,:]        
-        if savesample: u_idsip.save_pic(u_idsip.img_square(temp[disp_sample_list, :, :, :]), '02_01_1', filedir)
-        temp = threshold_OTSU(temp) 
-        if savesample: u_idsip.save_pic(u_idsip.img_square(temp[disp_sample_list, :, :, :]), '02_01_1-bw', filedir)
-
-        masks = masks[:,2,:,:]
-        masks = masks[:,np.newaxis,:,:]        
-        if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_2', filedir)
-        masks = threshold_OTSU(masks) 
-        if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_2-bw', filedir)
-
+        #形态学处理
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5))
         for idx, mask in enumerate(masks):
-            PSR_Dataset_img_pred[idx, 0, :, :] = np.where(mask==255, 0, PSR_Dataset_img[idx, 0, :, :])
-            PSR_Dataset_img_pred[idx, 1, :, :] = np.where(mask==255, 0, PSR_Dataset_img[idx, 1, :, :])
-            PSR_Dataset_img_pred[idx, 2, :, :] = np.where(mask==255, 0, PSR_Dataset_img[idx, 2, :, :])
-        if savesample: u_idsip.save_pic(u_idsip.img_square(PSR_Dataset_img_pred[disp_sample_list, :, :, :]), '02_03_maskminus', filedir)
+            dst = mask[0,:,:]
+            dst = cv2.dilate(dst,kernel=kernel)   #白色区域膨胀
+            dst = baweraopen_adapt(dst, intensity = 0.2, alpha = 0.01)
+            masks[idx,0,:,:] = dst
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_02_mask_xtx', filedir)
+
+
+    for idx, mask in enumerate(masks):
+        PSR_Dataset_img_pred[idx, 0, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 0, :, :], 0)
+        PSR_Dataset_img_pred[idx, 1, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 1, :, :], 0)
+        PSR_Dataset_img_pred[idx, 2, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 2, :, :], 0)
+    if savesample: u_idsip.save_pic(u_idsip.img_square(PSR_Dataset_img_pred[disp_sample_list, :, :, :]), '02_03_maskminus', filedir)
 
     #处理结束
     return PSR_Dataset_img_pred
@@ -121,6 +115,88 @@ def threshold_OTSU(imgs):
     u_st._check_imgs(imgs_new)
     return imgs_new
 
+@fun_run_time
+def segskin_ellipse_mask(imgs):
+    '''基于YCRCB的椭圆肤色模型.
+    输入一组图像，输出masks。
+    '''
+    u_st._check_imgs(imgs)
+    imgs = u_st.numpy2cv(imgs)
+    #
+    num, h, w, c = imgs.shape
+
+    Kl, Kh=125, 128
+    Ymin, Ymax = 16, 235
+    Wcb,WLcb, WHcb = 46.97, 23, 14
+    Wcr,WLcr, WHcr = 38.76, 20, 10
+    
+    theta = 145/180*3.14 #新坐标系倾角
+    cx = 145                #新坐标中心在原坐标系的坐标
+    cy = 120
+    ecx = -5
+    ecy = -2
+    a = ((13-ecx)**2+(-2-ecy)**2)**0.5   #肤色模型椭圆中心与轴长，在新坐标系
+    b = ((-5-ecx)**2+(7 -ecy)**2)**0.5
+
+    color = ['red','blue','yellow','green','orange','purple','black','gray']
+    #plt.figure()
+    
+    masks = np.zeros((num, h, w, 1), dtype=np.uint8)
+    for idx, img in enumerate(imgs):
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+        Y, Cr, Cb = cv2.split(img)
+        #
+        '''
+        cb1 = 108 + (Kl-Y) * 10/(Kl-Ymin)
+        cr1 = 154 + (Kl-Y) * 10/(Kl-Ymin)
+        wcbY = WLcb + (Y-Ymin) * (Wcb-WLcb)/(Kl-Ymin)
+        wcrY = WLcr + (Y-Ymin) * (Wcr-WLcr)/(Kl-Ymin);
+        Cb_ = np.where(Y<Kl, (Cb - cb1) * Wcb / wcbY + cb1, Cb)
+        Cr_ = np.where(Y<Kl, (Cr - cr1) * Wcr / wcrY + cr1, Cr)
+        #
+        cb1 = 108 + (Y-Kh) * 10 / (Ymax-Kh);
+        cr1 = 154 + (Y-Kh) * 22 / (Ymax-Kh);
+        wcbY = WHcb + (Ymax-Y) * (Wcb-WHcb) / (Ymax-Kh);
+        wcrY = WHcr + (Ymax-Y) * (Wcr-WHcr) / (Ymax-Kh);
+        Cb_ = np.where(Y>Kh, (Cb - cb1) * Wcb / wcbY + cb1, Cb_)
+        Cr_ = np.where(Y>Kh, (Cr - cr1) * Wcr / wcrY + cr1, Cr_)
+        '''
+        Cb_= np.array(Cb, dtype=np.float)
+        Cr_= np.array(Cr, dtype=np.float)
+        #
+        c_tha = math.cos(theta)
+        s_tha = math.sin(theta)
+        x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy)
+        y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy)
+        #
+        #plt.figure()
+        #plt.axis([-255,255,-255,255])
+        #plt.scatter(Cb_.flatten(),Cr_.flatten(), s=20,c=color[idx], alpha=0.01)
+        #plt.axis([-40,40,-40,40])
+        #plt.scatter(x1.flatten(),y1.flatten(), s=20,c=color[idx], alpha=0.01)
+        #plt.grid()
+        #plt.show()
+        #
+        distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
+        mask = np.where(distense <= 1, 255, 0)
+        #u_idsip.show_pic(mask,'ori',showtype='freedom')
+        if np.mean(mask)/255<0.2:
+            adapt_x = 13
+            adapt_y = -18
+            x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy) - adapt_x
+            y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy) -adapt_y
+            distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
+            mask = np.where(distense <= 1, 255, 0)
+            #u_idsip.show_pic(mask,'after')
+        mask = np.array(mask, dtype=np.uint8)
+        masks[idx, :, :, 0] = mask
+    #
+    #plt.ioff()
+    #plt.show()
+
+    masks = u_st.cv2numpy(masks)
+    u_st._check_imgs(masks)
+    return masks
 
 
 # TODO: 
@@ -133,7 +209,7 @@ def threshold_OTSU(imgs):
 # 形态学处理：腐蚀膨胀
 
 # 单张面积丢弃
-@fun_run_time
+#@fun_run_time
 def baweraopen_adapt(img, intensity = 0.2, alpha = 0.001):
     '''
     自适应面积丢弃(黑底上的白区域)
