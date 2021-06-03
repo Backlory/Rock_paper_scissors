@@ -30,21 +30,12 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     #按顺序做预处理
     PSR_Dataset_img_pred = PSR_Dataset_img.copy()
     filedir = 'experiment/'+ timenow +'/'
-    if mode == 0:
-        #基于椭圆肤色模型
-        masks = segskin_ellipse_mask(PSR_Dataset_img)
-        if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
-        
-        #形态学处理
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5))
-        for idx, mask in enumerate(masks):
-            dst = mask[0,:,:]
-            dst = cv2.dilate(dst,kernel=kernel)   #白色区域膨胀
-            dst = baweraopen_adapt(dst, intensity = 0.2, alpha = 0.01)
-            masks[idx,0,:,:] = dst
-        if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_02_mask_xtx', filedir)
 
-
+    #基于椭圆肤色模型
+    masks = segskin_ellipse_mask(PSR_Dataset_img)
+    if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
+    
+    #mask剪除
     for idx, mask in enumerate(masks):
         PSR_Dataset_img_pred[idx, 0, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 0, :, :], 0)
         PSR_Dataset_img_pred[idx, 1, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 1, :, :], 0)
@@ -180,7 +171,9 @@ def segskin_ellipse_mask(imgs):
         distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
         mask = np.where(distense <= 1, 255, 0)
         #u_idsip.show_pic(mask,'ori',showtype='freedom')
-        if np.mean(mask)/255<0.2:
+        mask=Morphological_processing(mask)
+
+        if np.mean(mask)/255<0.05:
             adapt_x = 13
             adapt_y = -18
             x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy) - adapt_x
@@ -188,7 +181,8 @@ def segskin_ellipse_mask(imgs):
             distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
             mask = np.where(distense <= 1, 255, 0)
             #u_idsip.show_pic(mask,'after')
-        mask = np.array(mask, dtype=np.uint8)
+            mask=Morphological_processing(mask)
+
         masks[idx, :, :, 0] = mask
     #
     #plt.ioff()
@@ -198,7 +192,20 @@ def segskin_ellipse_mask(imgs):
     u_st._check_imgs(masks)
     return masks
 
-
+def Morphological_processing(mask):
+    mask = np.array(mask, dtype=np.uint8)
+    #
+    mask = cv2.dilate(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域膨胀
+    mask = cv2.erode(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域收缩
+    mask = baweraopen_adapt(mask, intensity = 0.2, alpha = 0.01)
+    mask = 255 - mask
+    mask = cv2.erode(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域收缩
+    mask = baweraopen_adapt(mask, intensity = 0.3, alpha = 0.01)
+    mask = 255 - mask
+    mask = cv2.erode(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域收缩
+    #
+    mask = np.array(mask, dtype=np.uint8)
+    return mask
 # TODO: 
 
 

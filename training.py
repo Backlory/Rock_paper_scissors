@@ -20,9 +20,11 @@ if __name__ =='__main__':
     PSR_Dataset = data.data_loading.PSR_Dataset('data/data_origin') # data_origin,  data_my, data_bg, data_test
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
     readlist = list(range(len(PSR_Dataset)))
+    #readlist = [120*x for x in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]]
     #readlist = list(range(10))
     
-    disp_sample_list = random.sample(range(len(readlist)), 16) #9,16,64
+    disp_sample_list = random.sample(range(len(readlist)), 64) #9,16,64
+    #disp_sample_list = range(16)
     
     
     # 数据预处理
