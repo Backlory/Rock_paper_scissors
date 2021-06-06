@@ -2,11 +2,12 @@
 # CV图片通道在第四位，平时numpy都放在第二位的
 # 预处理部分。（pic3->pic3)
 import math
+from os import replace
 import cv2
 import random
 import numpy as np
 from matplotlib import pyplot as plt
-from numpy.lib.index_tricks import ndenumerate
+from numpy.lib.function_base import place
 
 
 import utils.structure_trans as u_st
@@ -27,12 +28,46 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     if savesample and ( timenow=='' or disp_sample_list==[]):
         raise(ValueError('timenow and disp_sample_list not given.'))
     #
-    #按顺序做预处理
     PSR_Dataset_img_pred = PSR_Dataset_img.copy()
     filedir = 'experiment/'+ timenow +'/'
+    
+    #mask获取
+    if mode == 0:
+        #基于椭圆肤色模型
+        masks = segskin_ellipse_mask(PSR_Dataset_img)
+    elif mode==1:
+        #canny边缘模型
+        masks = canny_expend_mask(PSR_Dataset_img)
+    elif mode==2:
+        #HSV通道otsu阈值模型
+        masks = threshold_OTSU_mask(PSR_Dataset_img)
+    elif mode==3:
+        #缝合怪模型，多个mask取平均
+        masks1 = segskin_ellipse_mask(PSR_Dataset_img)
+        #u_idsip.show_pic(masks1[0,:,:,:])
+        masks2 = canny_expend_mask(PSR_Dataset_img)
+        #u_idsip.show_pic(masks1[0,:,:,:])
+        masks3 = threshold_OTSU_mask(PSR_Dataset_img)
+        #u_idsip.show_pic(masks1[0,:,:,:])
+        #
+        masks_ = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
+        masks = cv2.addWeighted(masks_,0.666,masks3,0.333,0)
+        #u_idsip.show_pic(masks[0,:,:,:])
+    elif mode==4:
+        # 蒙特卡洛采样的GMM主动网格背景模型
+        # 划出目标区域，选取前景色，选取背景色，GMM生长？
+        region_roi, region_fg, region_bg = get_area_by_mouse(PSR_Dataset_img[0])
 
-    #基于椭圆肤色模型
-    masks = segskin_ellipse_mask(PSR_Dataset_img)
+        
+
+        #print(classification_report(Y_dataset, Y_pred))
+        #print('='*20)
+        #print(confusion_matrix(Y_test, Y_pred))
+        #print('='*20)
+
+        # mask生成
+
+        pass
     if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
     
     #mask剪除
@@ -44,6 +79,154 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
 
     #处理结束
     return PSR_Dataset_img_pred
+
+def img_svm(img, region_roi, region_fg, region_bg):
+    '''
+    输入numpy图像，roi区域，前景，背景
+    输出：SVM分类器。
+    '''
+    y0, y1, x0, x1 = region_roi
+    roi_y0, roi_y1, roi_x0, roi_x1 = region_fg
+    bg_y0, bg_y1, bg_x0, bg_x1 = region_bg
+    
+    # 转HSV训练SVM模型
+    from sklearn.svm import SVC
+    from sklearn.model_selection import StratifiedKFold #交叉验证
+    from sklearn.model_selection import GridSearchCV #网格搜索
+    from sklearn.model_selection import train_test_split
+    from sklearn.preprocessing import scale
+    from sklearn.metrics import classification_report
+    from sklearn.metrics import confusion_matrix
+    
+    # data
+    img_base_cv = u_st.numpy2cv(img)
+
+    region_fg = img_base_cv[roi_y0:roi_y1, roi_x0:roi_x1, :]
+    region_fg_ycrcb = cv2.cvtColor(region_fg, cv2.COLOR_BGR2YCR_CB)
+    x_train1 = region_fg_ycrcb.reshape(((roi_y1-roi_y0)*(roi_x1-roi_x0),-1))
+
+    region_bg = img_base_cv[bg_y0:bg_y1, bg_x0:bg_x1, :]
+    region_bg_ycrcb = cv2.cvtColor(region_bg, cv2.COLOR_BGR2YCR_CB)
+    x_train2 = region_bg_ycrcb.reshape(((bg_y1-bg_y0)*(bg_x1-bg_x0),-1))
+    
+    min_len = min((len(x_train1), len(x_train2)))
+    x_train1 = x_train1[np.random.choice(range(len(x_train1)), size=min_len,replace=False)]
+    x_train2 = x_train2[np.random.choice(range(len(x_train2)), size=min_len,replace=False)]
+    #x_train2 = np.random.choice(x_train2, size=min_len,replace=False)
+    X_dataset = np.concatenate((x_train1[:min_len],x_train2[:min_len]), axis=0)
+    X_dataset = scale(X_dataset)
+    Y_dataset = np.array([0]*min_len+[1]*min_len)
+    #X_train, X_test, Y_train, Y_test = train_test_split(X_dataset, Y_dataset, test_size=0.3, random_state=777)
+    #model
+    svmclassifier = SVC(C=1, kernel='rbf',gamma='scale',probability=True,verbose=2)
+    svmclassifier.fit(X_dataset, Y_dataset)
+    '''
+    kflod = StratifiedKFold(n_splits=10, shuffle = True,random_state=999)
+    param_grid = dict(C = [1])# 网格参数
+    grid_search = GridSearchCV( svmclassifier,
+                                param_grid,
+                                scoring = 'neg_log_loss',
+                                n_jobs = -1,    #CPU全开
+                                cv = kflod,
+                                verbose=1)
+    grid_result = grid_search.fit(X_train, Y_train) #运行网格搜索
+    print("Best: %f using %s" % (grid_result.best_score_,grid_search.best_params_))
+    means = grid_result.cv_results_['mean_test_score']
+    params = grid_result.cv_results_['params']
+    for mean,param in zip(means,params):
+        print("%f  with:   %r" % (mean,param))
+    '''
+
+    Y_pred = svmclassifier.predict(X_dataset)
+    return 1
+
+
+g_mouse_img_cv=None #原始图像
+g_mouse_point1=None
+g_mouse_point2=None
+def get_area_by_mouse(img, title=''):
+    '''
+    点击鼠标获取区域.
+    输入，numpy图像
+    返回:目标大致区域，目标颜色区域，背景颜色区域。
+    (y0, y1, x0, x1), (roi_y0, roi_y1, roi_x0, roi_x1), (bg_y0, bg_y1, bg_x0, bg_x1)= get_area_by_mouse(img)
+    '''
+    def on_mouse(event, x, y, flags, param):
+        global g_mouse_img_cv, g_mouse_point1, g_mouse_point2
+        if event == cv2.EVENT_LBUTTONDOWN:         #左键点击
+            g_mouse_point1 = (x,y)
+            temp = g_mouse_img_cv.copy()
+            temp = cv2.circle(temp, g_mouse_point1, 7, (0,255,0), 3)
+            cv2.imshow('image', temp)
+        elif event == cv2.EVENT_MOUSEMOVE and (flags & cv2.EVENT_FLAG_LBUTTON):               #按住左键拖曳
+            temp = g_mouse_img_cv.copy()
+            temp = cv2.circle(temp, g_mouse_point1, 7, (0,255,0), 3)
+            temp = cv2.circle(temp, (x,y), 7, (0,255,0), 3)
+            temp = cv2.rectangle(temp, g_mouse_point1, (x,y), (255,0,0), 2)
+            cv2.imshow('image', temp)
+        elif event == cv2.EVENT_LBUTTONUP:         #左键释放
+            g_mouse_point2 = (x,y)
+            temp = g_mouse_img_cv.copy()
+            temp = cv2.circle(temp, g_mouse_point1, 7, (0,255,0), 3)
+            temp = cv2.circle(temp, g_mouse_point2, 7, (0,255,0), 3)
+            temp = cv2.rectangle(temp, g_mouse_point1, g_mouse_point2, (255,0,0), 2)
+            cv2.imshow('image', temp)
+            '''
+            min_x = min(g_mouse_point1[0],g_mouse_point2[0])     
+            min_y = min(g_mouse_point1[1],g_mouse_point2[1])
+            width = abs(g_mouse_point1[0] - g_mouse_point2[0])
+            height = abs(g_mouse_point1[1] -g_mouse_point2[1])
+            
+            '''
+    def getarea():
+        '''
+        抓取全局变量转化为区域。
+        y0, y1, x0, x1 = getarea()
+        img_cut = img[y0:y1, x0:x1,:]
+        '''
+        global  g_mouse_point1, g_mouse_point2
+        min_x = min(g_mouse_point1[0],g_mouse_point2[0])
+        min_y = min(g_mouse_point1[1],g_mouse_point2[1])
+        width = abs(g_mouse_point1[0] - g_mouse_point2[0])
+        height = abs(g_mouse_point1[1] -g_mouse_point2[1])
+        return (min_y, min_y+height, min_x, min_x+width)
+    #区域划定
+    
+    global g_mouse_img_cv, g_mouse_point1, g_mouse_point2
+    g_mouse_img_cv = u_st.numpy2cv(img)
+    print(colorstr(f'\n\tArea sampling...'))
+    cv2.namedWindow('image',0)
+    cv2.resizeWindow('image', 640, 480)
+    cv2.setMouseCallback('image', on_mouse)
+    cv2.imshow('image', g_mouse_img_cv)
+    cv2.waitKey(0)
+    y0, y1, x0, x1 = getarea()
+    print(colorstr(f'\tArea sampled on [{y0}:{y1}, {x0}:{x1}].'))
+
+    # 目标颜色选取
+    g_mouse_img_cv = u_st.numpy2cv(img[:, y0:y1, x0:x1])
+    print(colorstr(f'\tROI sampling...'))
+    cv2.namedWindow('image',0)
+    cv2.resizeWindow('image', 640, 480)
+    cv2.setMouseCallback('image', on_mouse)
+    cv2.imshow('image', g_mouse_img_cv)
+    cv2.waitKey(0)
+    roi_y0, roi_y1, roi_x0, roi_x1 = getarea()
+    print(colorstr(f'\tROI:[{roi_y0}:{roi_y1}, {roi_x0}:{roi_x1}].'))
+
+    # 背景颜色选取
+    print(colorstr(f'\tBackground sampling...'))
+    cv2.namedWindow('image',0)
+    cv2.resizeWindow('image', 640, 480)
+    cv2.setMouseCallback('image', on_mouse)
+    cv2.imshow('image', g_mouse_img_cv)
+    cv2.waitKey(0)
+    bg_y0, bg_y1, bg_x0, bg_x1 = getarea()
+    print(colorstr(f'\tBackground:[{bg_y0}:{bg_y1}, {bg_x0}:{bg_x1}].'))
+    
+    return (y0, y1, x0, x1), (roi_y0, roi_y1, roi_x0, roi_x1), (bg_y0, bg_y1, bg_x0, bg_x1)
+
+
 
 @fun_run_time
 def rgb2HSV(imgs):
@@ -88,24 +271,43 @@ def three2one(imgs, channal=0):
     u_st._check_imgs(imgs_new)
     return imgs_new
 
-#V通道大津阈值法
-@fun_run_time
-def threshold_OTSU(imgs):
-    ''' 
-    对单通道原图大津阈值分割
+# 小面积丢弃
+#@fun_run_time
+def baweraopen_adapt(img, intensity = 0.2, alpha = 0.001):
     '''
-    u_st._check_imgs(imgs) #[num, c, h, w]
-    imgs = u_st.numpy2cv(imgs)
-    #
-    imgs_new = np.zeros_like(imgs, dtype=np.uint8)
-    for idx, img in enumerate(imgs):
-        _, dst = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
-        imgs_new[idx,:,:,0] = dst
-    #
-    imgs_new = u_st.cv2numpy(imgs_new)
-    u_st._check_imgs(imgs_new)
-    return imgs_new
+    自适应面积丢弃(黑底上的白区域)
+    二值化后，统计白色区域的总面积，并去除掉面积低于白色总面积20%的白色小区域。
+    img:单通道二值图，数据类型uint8
+    intensity:相对面积阈值
+    alpha:绝对面积阈值
+    eg.
+    im2=baweraopen_adapt(im1,0.2, 0.001)去除面积低于20%或面积低于总0.1%
+    '''
+    img_h, img_w = img.shape
+    _, output = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)    #二值化处理
+    nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(output)
+    total_region_size = np.sum(stats[1:nlabels,4])
+    for i in range(1, nlabels):
+        regions_size = stats[i,4]
+        if regions_size < total_region_size * intensity or  regions_size < img_h * img_w * alpha:
+            x0 = stats[i,0]
+            y0 = stats[i,1]
+            x1 = stats[i,0]+stats[i,2]
+            y1 = stats[i,1]+stats[i,3]
+            # output[labels[y0:y1, x0:x1] == i] = 0
+            for row in range(y0,y1):
+                for col in range(x0,x1):
+                    if labels[row, col]==i:
+                        output[row, col]=0
+    return output
 
+
+##
+ 
+
+ 
+
+#ycrcb椭圆肤色模型
 @fun_run_time
 def segskin_ellipse_mask(imgs):
     '''基于YCRCB的椭圆肤色模型.
@@ -193,6 +395,10 @@ def segskin_ellipse_mask(imgs):
     return masks
 
 def Morphological_processing(mask):
+    '''
+    输入：2d图片，
+    输出：形态学处理好后的2d图片
+    '''
     mask = np.array(mask, dtype=np.uint8)
     #
     mask = cv2.dilate(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域膨胀
@@ -215,40 +421,74 @@ def Morphological_processing(mask):
 
 # 形态学处理：腐蚀膨胀
 
-# 单张面积丢弃
-#@fun_run_time
-def baweraopen_adapt(img, intensity = 0.2, alpha = 0.001):
-    '''
-    自适应面积丢弃(黑底上的白区域)
-    二值化后，统计白色区域的总面积，并去除掉面积低于白色总面积20%的白色小区域。
-    img:单通道二值图，数据类型uint8
-    intensity:相对面积阈值
-    alpha:绝对面积阈值
-    eg.
-    im2=baweraopen_adapt(im1,0.2, 0.001)去除面积低于20%或面积低于总0.1%
-    '''
-    img_h, img_w = img.shape
-    _, output = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)    #二值化处理
-    nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(output)
-    total_region_size = np.sum(stats[1:nlabels,4])
-    for i in range(1, nlabels):
-        regions_size = stats[i,4]
-        if regions_size < total_region_size * intensity or  regions_size < img_h * img_w * alpha:
-            x0 = stats[i,0]
-            y0 = stats[i,1]
-            x1 = stats[i,0]+stats[i,2]
-            y1 = stats[i,1]+stats[i,3]
-            # output[labels[y0:y1, x0:x1] == i] = 0
-            for row in range(y0,y1):
-                for col in range(x0,x1):
-                    if labels[row, col]==i:
-                        output[row, col]=0
-    return output
+
 
 #复杂背景：主动轮廓模型snake
 #复杂背景：梯度矢量流主动轮廓模型GVF-snake
 #复杂背景：超像素生长法
 
+
+#canny形态学算子
+@fun_run_time
+def canny_expend_mask(imgs):
+    ''' 
+    对单通道原图大津阈值分割
+    '''
+    u_st._check_imgs(imgs) #[num, c, h, w]
+    imgs = u_st.numpy2cv(imgs)
+    #
+    num, h, w, c = imgs.shape
+    masks = np.zeros((num, h,w,1), dtype=np.uint8)
+    for idx, img in enumerate(imgs):
+        dst = cv2.Canny(img, 50, 150)
+        dst = cv2.dilate(dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))
+        dst = 255 - dst
+        #u_idsip.show_pic(dst,'2','freedom')
+        dst = baweraopen_adapt(dst, intensity = 0.5, alpha = 0.001)
+        #u_idsip.show_pic(dst,'3','freedom')
+        dst = 255 - dst
+        dst = baweraopen_adapt(dst, intensity = 0.2, alpha = 0.001)
+        #u_idsip.show_pic(dst,'4','freedom')
+        dst = cv2.erode( dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))
+        #u_idsip.show_pic(dst,'5','freedom')
+        masks[idx,:,:,0] = dst
+    #
+    masks = u_st.cv2numpy(masks)
+    u_st._check_imgs(masks)
+    return masks
+
+#V通道大津阈值法
+@fun_run_time
+def threshold_OTSU_mask(imgs):
+    ''' 
+    对单通道原图大津阈值分割
+    '''
+    u_st._check_imgs(imgs) #[num, c, h, w]
+    imgs = u_st.numpy2cv(imgs)
+    #
+    num, h, w, c = imgs.shape
+    masks = np.zeros((num, h,w,1), dtype=np.uint8)
+    for idx, img in enumerate(imgs):
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h,s,v = cv2.split(img)
+        _, dst = cv2.threshold(h, 0, 255, cv2.THRESH_OTSU)
+        # 图像最外围检测
+        temp  = np.mean(dst[0, :])/255.0
+        temp += np.mean(dst[-1,:])/255.0
+        temp += np.mean(dst[:, 0])/255.0
+        temp += np.mean(dst[:,-1])/255.0
+        temp /= 4
+        if temp > 0.5:
+            dst = 255- dst
+        #形态学处理
+        dst = Morphological_processing(dst)
+
+        dst = dst.astype(np.uint8)
+        masks[idx,:,:,0] = dst
+    #
+    masks = u_st.cv2numpy(masks)
+    u_st._check_imgs(masks)
+    return masks
 
 '''
 @fun_run_time

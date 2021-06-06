@@ -74,10 +74,10 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
 
 
 # 中值滤波     MidBlur
-@fun_run_time
+#@fun_run_time
 def median_blur(imgs, arg, size=3):    
     ''' 
-    中值模糊  对椒盐噪声有去燥效果
+    中值模糊  对椒盐噪声有去燥效果。输入numpy图片
     '''
     size=arg[0]
     u_st._check_imgs(imgs)
@@ -93,10 +93,10 @@ def median_blur(imgs, arg, size=3):
     return imgs_new
 
 # 缩放
-@fun_run_time
+#@fun_run_time
 def resize(imgs, arg=[], size=(300,300)):    
     ''' 
-    图像缩放。
+    图像缩放。输入numpy图片
     '''
     size=arg[0]
     #
@@ -147,11 +147,11 @@ def equalizeHist(imgs, arg=[],type='CLAHE'):
     u_st._check_imgs(imgs_new)
     return imgs_new
 
-@fun_run_time
+#@fun_run_time
 def ad_exp_trans(imgs, arg=[]):
     ''' 
     基于高斯模糊的自适应指数变换，消除光照不均衡阴影
-    输入图片，串联等级(一般2)
+    输入图片numpy图片
     '''
     u_st._check_imgs(imgs)
     imgs = u_st.numpy2cv(imgs)
@@ -198,6 +198,7 @@ def ad_exp_trans(imgs, arg=[]):
         hsv = cv2.merge([h, s, v])
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
         imgs_new[idx, :, :, :] = rgb
+        #
         if len(imgs)>10:
             if idx % int(len(imgs)/10) == int(len(imgs)/10)-1:
                 print(f'\t{idx+1}/{len(imgs)} has been processed...')

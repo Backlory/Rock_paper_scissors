@@ -17,13 +17,13 @@ if __name__ =='__main__':
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
     
     # 数据加载
-    PSR_Dataset = data.data_loading.PSR_Dataset('data/data_origin') # data_origin,  data_my, data_bg, data_test
+    PSR_Dataset = data.data_loading.PSR_Dataset('data/data_my') # data_origin,  data_my, data_test
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
     readlist = list(range(len(PSR_Dataset)))
     #readlist = [120*x for x in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]]
-    #readlist = list(range(10))
+    #readlist = list(range(16))
     
-    disp_sample_list = random.sample(range(len(readlist)), 64) #9,16,64
+    disp_sample_list = random.sample(range(len(readlist)), 9) #9,16,64
     #disp_sample_list = range(16)
     
     
@@ -39,7 +39,7 @@ if __name__ =='__main__':
                                                             timenow = timenow, 
                                                             disp_sample_list = disp_sample_list)
     # ROI提取
-    mode=0
+    mode=4
     PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
                                         mode,
                                         savesample = True, 
