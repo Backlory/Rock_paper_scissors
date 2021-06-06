@@ -39,7 +39,7 @@ if __name__ =='__main__':
                                                             timenow = timenow, 
                                                             disp_sample_list = disp_sample_list)
     # ROI提取
-    mode=4
+    mode=5
     PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
                                         mode,
                                         savesample = True, 

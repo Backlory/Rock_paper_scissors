@@ -58,10 +58,26 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     elif mode==4:
         # 蒙特卡洛采样的GMM主动网格背景模型
         # 划出目标区域，选取前景色，选取背景色，GMM生长？
+        len(PSR_Dataset_img)
         region_roi, region_fg, region_bg = get_area_by_mouse(PSR_Dataset_img[0])
-        model = svm_trained_by_img(PSR_Dataset_img[0], region_roi, region_fg, region_bg)
-        masks = SVM_mask(PSR_Dataset_img, model)
-
+        model = classifier_trained_by_img(PSR_Dataset_img[0], region_roi, region_fg, region_bg)
+        masks = classifier_mask(PSR_Dataset_img, model)
+    elif mode==5:
+        # 1、初始化背景模型
+        # 在数据集中随机采样，然后双边滤波
+        # 在CrCb通道，计算样本各像素点的【区域配准方差】。
+        # 【区域配准方差】，a图m点与b图m点之间的方差 = a图m点3*3区域与b图m点3*3区域，两两结合后得到的最小值
+        # 方差小的像素点，意味着没怎么动过，只受到光照影响。
+        # 然后在yCrCb空间用阈值取形态学保留外环形成背景。
+        # 然后计算背景数据在HSV通道的阈值
+        # 2、利用该阈值对原始做阈值分割，把背景都割掉
+        PSR_subDataset_img = PSR_Dataset_img[np.random.choice(range(len(PSR_Dataset_img)), size=100,replace=False)]
+        PSR_subDataset_img_cv = u_st.numpy2cv(PSR_subDataset_img)
+        for idx, img_cv in enumerate(PSR_subDataset_img_cv):
+            img_cv = cv2.bilateralFilter(img_cv, 0, 100, 5)
+            u_idsip.show_pic(u_st.cv2numpy(img_cv))
+        pass
+        
         
     if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
     
@@ -78,29 +94,36 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
 
 
 #@fun_run_time
-def SVM_mask(imgs, model):
+def classifier_mask(imgs, model):
     ''' 
     输入图像和基于像素的分类器，采用二分类器处理图像获取mask。
     '''
     u_st._check_imgs(imgs) #[num, c, h, w]
     imgs = u_st.numpy2cv(imgs)
+    imgs = graylevel_down(imgs, 16)
     #
     num, h, w, c = imgs.shape
     masks = np.zeros((num, h,w,1), dtype=np.uint8)
     obj_h,obj_w = 64,64
     for idx, img in enumerate(imgs):
+        u_idsip.show_pic(u_st.cv2numpy(img))
+
         img = cv2.resize(img, (obj_h,obj_w))
+        u_idsip.show_pic(u_st.cv2numpy(img))
+
         img = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+        img = img[:,:,1:]
+        
         x_test = img.reshape((obj_h*obj_w, -1))
         x_test = scale(x_test)
         y_pred = model.predict(x_test)
-        dst = y_pred.reshape(obj_h,obj_w,1)*255
-        u_idsip.show_pic(dst)
-
-        dst = cv2.resize(dst, (h,w))
+        dst = y_pred.reshape(obj_h,obj_w)*255
         dst = dst.astype(np.uint8)
         u_idsip.show_pic(dst)
         
+        dst = cv2.resize(dst, (h,w))
+        u_idsip.show_pic(dst)
+
         #形态学处理
         dst = Morphological_processing(dst)
         u_idsip.show_pic(dst)
@@ -113,7 +136,7 @@ def SVM_mask(imgs, model):
     return masks
 
 
-def svm_trained_by_img(img, region_roi, region_fg, region_bg):
+def classifier_trained_by_img(img, region_roi, region_fg, region_bg):
     '''
     输入numpy图像，roi区域，前景，背景
     输出：SVM分类器。
@@ -123,7 +146,6 @@ def svm_trained_by_img(img, region_roi, region_fg, region_bg):
     bg_y0, bg_y1, bg_x0, bg_x1 = region_bg
     
     # 转HSV训练SVM模型
-    from sklearn.svm import SVC
     from sklearn.model_selection import StratifiedKFold #交叉验证
     from sklearn.model_selection import GridSearchCV #网格搜索
     from sklearn.model_selection import train_test_split
@@ -132,7 +154,11 @@ def svm_trained_by_img(img, region_roi, region_fg, region_bg):
     
     # data
     img_cv = u_st.numpy2cv(img)                                 #转cv格式
+
+    img_cv = graylevel_down(img_cv, 16)
+
     img_ycrcb_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2YCR_CB)   #转ycrcb
+    img_ycrcb_cv = img_ycrcb_cv[:,:,1:]                         #取crcb
     h,w,c = img_ycrcb_cv.shape 
     img_ycrcb_cv = np.reshape(img_ycrcb_cv, (h*w,c))
     img_ycrcb_cv = scale(img_ycrcb_cv)                          #归一化
@@ -151,8 +177,13 @@ def svm_trained_by_img(img, region_roi, region_fg, region_bg):
     #X_train, X_test, Y_train, Y_test = train_test_split(X_dataset, Y_dataset, test_size=0.3, random_state=777)
     
     #model
-    svmclassifier = SVC(C=1, kernel='rbf',gamma='scale',probability=True,verbose=2)
-    svmclassifier.fit(X_dataset, Y_dataset)
+    from sklearn.svm import SVC
+    classifier = SVC(C=0.01, kernel='rbf',gamma='scale',probability=True,verbose=2)
+    #from sklearn.ensemble import RandomForestClassifier
+    #classifier = RandomForestClassifier(n_estimators=50, criterion='gini')
+
+    classifier.fit(X_dataset, Y_dataset)
+
     '''
     kflod = StratifiedKFold(n_splits=10, shuffle = True,random_state=999)
     param_grid = dict(C = [1])# 网格参数
@@ -175,8 +206,19 @@ def svm_trained_by_img(img, region_roi, region_fg, region_bg):
     #print('='*20)
     #print(confusion_matrix(Y_test, Y_pred))
     #print('='*20)
-    return svmclassifier
+    return classifier
 
+def graylevel_down(img, fac=16):
+    '''
+    输入图像，输出灰度级降低过的图像。
+    目前是fac=16.
+    256级灰度降低为256/fac级灰度。
+    '''
+    temp = img*1.0/fac
+    temp = temp.astype(np.uint8)
+    temp = temp * fac
+    temp = temp.astype(np.uint8)
+    return temp
 
 g_mouse_img_cv=None #原始图像
 g_mouse_point1=None
@@ -227,9 +269,11 @@ def get_area_by_mouse(img, title=''):
         width = abs(g_mouse_point1[0] - g_mouse_point2[0])
         height = abs(g_mouse_point1[1] -g_mouse_point2[1])
         return (min_y, min_y+height, min_x, min_x+width)
-    #区域划定
     
     global g_mouse_img_cv, g_mouse_point1, g_mouse_point2
+    img = graylevel_down(img, 16)
+    
+    #区域划定
     g_mouse_img_cv = u_st.numpy2cv(img)
     print(colorstr(f'\n\tArea sampling...'))
     cv2.namedWindow('image',0)

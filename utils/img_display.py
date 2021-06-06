@@ -51,7 +51,7 @@ def save_pic(data,filename,filedir = ''):
 
 def show_pic(data,windowname = 'default',showtype='freeze'):
     '''
-    展示三维RGB矩阵图片。
+    展示三维RGB矩阵图片，格式为numpy格式
     show_pic(pic,"asd","freeze") 冻结型显示
     show_pic(pic,"asd","freedom")自由型显示
     '''
