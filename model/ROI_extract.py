@@ -10,6 +10,8 @@ from matplotlib import pyplot as plt
 from numpy.lib.function_base import place
 
 
+from sklearn.preprocessing import scale
+
 import utils.structure_trans as u_st
 import utils.img_display as u_idsip
 from utils.tools import colorstr, tic, toc   
@@ -57,17 +59,10 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         # 蒙特卡洛采样的GMM主动网格背景模型
         # 划出目标区域，选取前景色，选取背景色，GMM生长？
         region_roi, region_fg, region_bg = get_area_by_mouse(PSR_Dataset_img[0])
+        model = svm_trained_by_img(PSR_Dataset_img[0], region_roi, region_fg, region_bg)
+        masks = SVM_mask(PSR_Dataset_img, model)
 
         
-
-        #print(classification_report(Y_dataset, Y_pred))
-        #print('='*20)
-        #print(confusion_matrix(Y_test, Y_pred))
-        #print('='*20)
-
-        # mask生成
-
-        pass
     if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
     
     #mask剪除
@@ -80,7 +75,45 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     #处理结束
     return PSR_Dataset_img_pred
 
-def img_svm(img, region_roi, region_fg, region_bg):
+
+
+#@fun_run_time
+def SVM_mask(imgs, model):
+    ''' 
+    输入图像和基于像素的分类器，采用二分类器处理图像获取mask。
+    '''
+    u_st._check_imgs(imgs) #[num, c, h, w]
+    imgs = u_st.numpy2cv(imgs)
+    #
+    num, h, w, c = imgs.shape
+    masks = np.zeros((num, h,w,1), dtype=np.uint8)
+    obj_h,obj_w = 64,64
+    for idx, img in enumerate(imgs):
+        img = cv2.resize(img, (obj_h,obj_w))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+        x_test = img.reshape((obj_h*obj_w, -1))
+        x_test = scale(x_test)
+        y_pred = model.predict(x_test)
+        dst = y_pred.reshape(obj_h,obj_w,1)*255
+        u_idsip.show_pic(dst)
+
+        dst = cv2.resize(dst, (h,w))
+        dst = dst.astype(np.uint8)
+        u_idsip.show_pic(dst)
+        
+        #形态学处理
+        dst = Morphological_processing(dst)
+        u_idsip.show_pic(dst)
+        
+        dst = dst.astype(np.uint8)
+        masks[idx,:,:,0] = dst
+    #
+    masks = u_st.cv2numpy(masks)
+    u_st._check_imgs(masks)
+    return masks
+
+
+def svm_trained_by_img(img, region_roi, region_fg, region_bg):
     '''
     输入numpy图像，roi区域，前景，背景
     输出：SVM分类器。
@@ -94,29 +127,29 @@ def img_svm(img, region_roi, region_fg, region_bg):
     from sklearn.model_selection import StratifiedKFold #交叉验证
     from sklearn.model_selection import GridSearchCV #网格搜索
     from sklearn.model_selection import train_test_split
-    from sklearn.preprocessing import scale
     from sklearn.metrics import classification_report
     from sklearn.metrics import confusion_matrix
     
     # data
-    img_base_cv = u_st.numpy2cv(img)
+    img_cv = u_st.numpy2cv(img)                                 #转cv格式
+    img_ycrcb_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2YCR_CB)   #转ycrcb
+    h,w,c = img_ycrcb_cv.shape 
+    img_ycrcb_cv = np.reshape(img_ycrcb_cv, (h*w,c))
+    img_ycrcb_cv = scale(img_ycrcb_cv)                          #归一化
+    img_ycrcb_cv = np.reshape(img_ycrcb_cv, (h,w,c))
 
-    region_fg = img_base_cv[roi_y0:roi_y1, roi_x0:roi_x1, :]
-    region_fg_ycrcb = cv2.cvtColor(region_fg, cv2.COLOR_BGR2YCR_CB)
-    x_train1 = region_fg_ycrcb.reshape(((roi_y1-roi_y0)*(roi_x1-roi_x0),-1))
-
-    region_bg = img_base_cv[bg_y0:bg_y1, bg_x0:bg_x1, :]
-    region_bg_ycrcb = cv2.cvtColor(region_bg, cv2.COLOR_BGR2YCR_CB)
-    x_train2 = region_bg_ycrcb.reshape(((bg_y1-bg_y0)*(bg_x1-bg_x0),-1))
+    region_fg = img_ycrcb_cv[roi_y0:roi_y1, roi_x0:roi_x1, :]
+    x_train1 = region_fg.reshape(((roi_y1-roi_y0)*(roi_x1-roi_x0),-1))
+    region_bg = img_ycrcb_cv[bg_y0:bg_y1, bg_x0:bg_x1, :]
+    x_train2 = region_bg.reshape(((bg_y1-bg_y0)*(bg_x1-bg_x0),-1))
     
     min_len = min((len(x_train1), len(x_train2)))
     x_train1 = x_train1[np.random.choice(range(len(x_train1)), size=min_len,replace=False)]
     x_train2 = x_train2[np.random.choice(range(len(x_train2)), size=min_len,replace=False)]
-    #x_train2 = np.random.choice(x_train2, size=min_len,replace=False)
     X_dataset = np.concatenate((x_train1[:min_len],x_train2[:min_len]), axis=0)
-    X_dataset = scale(X_dataset)
-    Y_dataset = np.array([0]*min_len+[1]*min_len)
+    Y_dataset = np.array([1]*min_len+[0]*min_len)   #1为前景，0为背景
     #X_train, X_test, Y_train, Y_test = train_test_split(X_dataset, Y_dataset, test_size=0.3, random_state=777)
+    
     #model
     svmclassifier = SVC(C=1, kernel='rbf',gamma='scale',probability=True,verbose=2)
     svmclassifier.fit(X_dataset, Y_dataset)
@@ -137,8 +170,12 @@ def img_svm(img, region_roi, region_fg, region_bg):
         print("%f  with:   %r" % (mean,param))
     '''
 
-    Y_pred = svmclassifier.predict(X_dataset)
-    return 1
+    #Y_pred = svmclassifier.predict(X_dataset)
+    #print(classification_report(Y_dataset, Y_pred))
+    #print('='*20)
+    #print(confusion_matrix(Y_test, Y_pred))
+    #print('='*20)
+    return svmclassifier
 
 
 g_mouse_img_cv=None #原始图像
