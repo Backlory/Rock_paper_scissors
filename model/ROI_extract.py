@@ -46,16 +46,22 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         masks = threshold_OTSU_mask(PSR_Dataset_img)
     elif mode==3:
         #缝合怪模型，多个mask取平均
-        masks1 = segskin_ellipse_mask(PSR_Dataset_img)
-        masks2 = canny_expend_mask(PSR_Dataset_img)
-        masks3 = threshold_OTSU_mask(PSR_Dataset_img)
+        PSR_Dataset_img_64 = graylevel_down(PSR_Dataset_img, 4)
+        masks1 = segskin_ellipse_mask(PSR_Dataset_img_64)
+        masks2 = canny_expend_mask(PSR_Dataset_img_64)
+        masks3 = threshold_OTSU_mask(PSR_Dataset_img_64)
         #
-        masks_ = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
-        masks = cv2.addWeighted(masks_,0.666,masks3,0.333,0)
+        masks_muti = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
+        masks_muti = cv2.addWeighted(masks_muti,0.666,masks3,0.333,0)
+        masks = np.where(masks_muti>255*0.05, 255, 0)
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks1[disp_sample_list, :, :, :]), '02_01_masks1', filedir)
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks2[disp_sample_list, :, :, :]), '02_01_masks2', filedir)
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks3[disp_sample_list, :, :, :]), '02_01_masks3', filedir)
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks_muti[disp_sample_list, :, :, :]), '02_01_mutil_masks', filedir)
+
         #u_idsip.show_pic(masks[0,:,:,:])
     elif mode==4:
-        # 蒙特卡洛采样的GMM主动网格背景模型
-        # 划出目标区域，选取前景色，选取背景色，GMM生长？
+        # 基于像素值分类器的主动网格背景模型。有缺陷，即不能对肤色做处理
         len(PSR_Dataset_img)
         region_roi, region_fg, region_bg = get_area_by_mouse(PSR_Dataset_img[0])
         model = classifier_trained_by_img(PSR_Dataset_img[0], region_roi, region_fg, region_bg)
@@ -85,7 +91,7 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
 
         
         
-    if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
+    if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_02_mask', filedir)
     
     #mask剪除
     for idx, mask in enumerate(masks):
@@ -410,23 +416,27 @@ def segskin_ellipse_mask(imgs):
     Wcb,WLcb, WHcb = 46.97, 23, 14
     Wcr,WLcr, WHcr = 38.76, 20, 10
     
-    theta = 145/180*3.14 #新坐标系倾角
-    cx = 145                #新坐标中心在原坐标系的坐标
-    cy = 120
-    ecx = -5
+    theta = -50/180*3.14 #新坐标系倾角，正为顺时针转
+    cx = 114                #新坐标中心在原坐标系的坐标
+    cy = 147
+    ecx = -5 #椭圆偏移坐标
     ecy = -2
-    a = ((13-ecx)**2+(-2-ecy)**2)**0.5   #肤色模型椭圆中心与轴长，在新坐标系
-    b = ((-5-ecx)**2+(7 -ecy)**2)**0.5
+    a = 18   #肤色模型椭圆中心与轴长，在新坐标系
+    b = 7
 
-    color = ['red','blue','yellow','green','orange','purple','black','gray']
+    color = ['red','blue','yellow','green','orange','purple','black','gray','pink']
     #plt.figure()
     
     masks = np.zeros((num, h, w, 1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
+        cv2.waitKey(0)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2YCR_CB)
         Y, Cr, Cb = cv2.split(img)
+        #u_idsip.show_pic(Y,'Y')
+        #u_idsip.show_pic(Cr,'Cr')
+        #u_idsip.show_pic(Cb,'Cb')
         #
-        '''
+        #'''
         cb1 = 108 + (Kl-Y) * 10/(Kl-Ymin)
         cr1 = 154 + (Kl-Y) * 10/(Kl-Ymin)
         wcbY = WLcb + (Y-Ymin) * (Wcb-WLcb)/(Kl-Ymin)
@@ -440,7 +450,7 @@ def segskin_ellipse_mask(imgs):
         wcrY = WHcr + (Ymax-Y) * (Wcr-WHcr) / (Ymax-Kh);
         Cb_ = np.where(Y>Kh, (Cb - cb1) * Wcb / wcbY + cb1, Cb_)
         Cr_ = np.where(Y>Kh, (Cr - cr1) * Wcr / wcrY + cr1, Cr_)
-        '''
+        #'''
         Cb_= np.array(Cb, dtype=np.float)
         Cr_= np.array(Cr, dtype=np.float)
         #
@@ -531,7 +541,7 @@ def canny_expend_mask(imgs):
         dst = cv2.dilate(dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))
         dst = 255 - dst
         #u_idsip.show_pic(dst,'2','freedom')
-        dst = baweraopen_adapt(dst, intensity = 0.5, alpha = 0.001)
+        dst = baweraopen_adapt(dst, intensity = 0.3, alpha = 0.001)
         #u_idsip.show_pic(dst,'3','freedom')
         dst = 255 - dst
         dst = baweraopen_adapt(dst, intensity = 0.2, alpha = 0.001)
