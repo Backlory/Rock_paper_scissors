@@ -32,13 +32,11 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
     print(colorstr('='*50, 'red'))
     print(colorstr('Feature extracting...'))
     #
-    cv2.waitKey(0)
     num, c, h, w = PSR_Dataset_img.shape
-    PSR_Dataset_Vectors = []
-    
+
     #特征获取
-    if mode == 1:
-        #基于椭圆肤色模型
+    if mode == 0:
+        #圆形度
         PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, get_circularity)
     elif mode==2:
         pass
@@ -55,7 +53,7 @@ def get_Vectors(imgs, func, **kwargs):
     img_num = len(imgs)
     #
     result = []
-    for idx, img in imgs:
+    for idx, img in enumerate(imgs):
         temp = func(img, **kwargs)
         result.append(temp)
         if idx % int(img_num/10) == int(img_num/10)-1:
@@ -72,7 +70,15 @@ def get_circularity(img_cv):
     '''
     计算圆形度。输入cv图片，RGB
     '''
-    Vectors = 
+    img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAYG)
+    img_cv[img_cv>0]=255
+    contours, _ = cv2.findContours(img_cv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    a = cv2.contourArea(contours[0]) * 4 * math.pi      #面积
+    b = math.pow(cv2.arcLength(contours[0], True), 2)   #周长
+    if b > 0:
+        Vectors = a / b
+    else:
+        Vectors = 0
     return Vectors
 
 # 质心提取

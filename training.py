@@ -22,10 +22,10 @@ if __name__ =='__main__':
     
     np.random.seed(777)
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
-    readlist = np.random.choice(range(len(PSR_Dataset)), 100).tolist()
+    readlist = np.random.choice(range(len(PSR_Dataset)), 10).tolist()
     #readlist = list(range(len(PSR_Dataset)))
     
-    disp_sample_list = random.sample(range(len(readlist)), 16) #9,16,64
+    disp_sample_list = random.sample(range(len(readlist)), 9) #9,16,64
     
     
     # 数据预处理

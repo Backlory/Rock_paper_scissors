@@ -484,7 +484,8 @@ def segskin_ellipse_mask(imgs):
         #plt.grid()
         #plt.show()
         #
-        distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
+        distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0.001)
+        distense[distense==0]=0.0001
         mask = np.where(distense <= 1, 255, 127/distense)
         #u_idsip.show_pic(mask,'ori',showtype='freedom')
         mask=Morphological_processing(mask)
