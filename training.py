@@ -17,14 +17,14 @@ if __name__ =='__main__':
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
     
     # 数据加载
-    PSR_Dataset = data.data_loading.PSR_Dataset('data/data_test') # data_origin,  data_my, data_test
+    PSR_Dataset = data.data_loading.PSR_Dataset('data/data_my') # data_origin,  data_my, data_test
     
     np.random.seed(777)
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
-    #readlist = np.random.choice(range(len(PSR_Dataset)), 100).tolist()
-    readlist = list(range(len(PSR_Dataset)))
+    readlist = np.random.choice(range(len(PSR_Dataset)), 100).tolist()
+    #readlist = list(range(len(PSR_Dataset)))
     
-    disp_sample_list = random.sample(range(len(readlist)), 9) #9,16,64
+    disp_sample_list = random.sample(range(len(readlist)), 16) #9,16,64
     #disp_sample_list = range(16)
     
     

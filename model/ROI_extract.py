@@ -45,28 +45,34 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         #HSV通道otsu阈值模型
         masks = threshold_OTSU_mask(PSR_Dataset_img)
     elif mode==3:
+        #基于外围框的固定阈值模型
+        masks = threshold_bg_mask(PSR_Dataset_img)
+    elif mode==4:
         #缝合怪模型，多个mask取平均
         PSR_Dataset_img_64 = graylevel_down(PSR_Dataset_img, 4)
         masks1 = segskin_ellipse_mask(PSR_Dataset_img_64)
         masks2 = canny_expend_mask(PSR_Dataset_img_64)
         masks3 = threshold_OTSU_mask(PSR_Dataset_img_64)
+        masks4 = threshold_bg_mask(PSR_Dataset_img_64)
         #
         masks_muti = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
-        masks_muti = cv2.addWeighted(masks_muti,0.666,masks3,0.333,0)
-        masks = np.where(masks_muti>255*0.05, 255, 0)
+        masks_muti = cv2.addWeighted(masks_muti,2/3,masks3,1/3,0)
+        masks_muti = cv2.addWeighted(masks_muti,3/4,masks4,1/4,0)
+        masks = np.where(masks_muti>=255*(0.5), 255, 0) #置信度阈值0.5
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks1[disp_sample_list, :, :, :]), '02_01_masks1', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks2[disp_sample_list, :, :, :]), '02_01_masks2', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks3[disp_sample_list, :, :, :]), '02_01_masks3', filedir)
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks4[disp_sample_list, :, :, :]), '02_01_masks4', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks_muti[disp_sample_list, :, :, :]), '02_01_mutil_masks', filedir)
 
         #u_idsip.show_pic(masks[0,:,:,:])
-    elif mode==4:
+    elif mode==5:
         # 基于像素值分类器的主动网格背景模型。有缺陷，即不能对肤色做处理
         len(PSR_Dataset_img)
         region_roi, region_fg, region_bg = get_area_by_mouse(PSR_Dataset_img[0])
         model = classifier_trained_by_img(PSR_Dataset_img[0], region_roi, region_fg, region_bg)
         masks = classifier_mask(PSR_Dataset_img, model)
-    elif mode==5:
+    elif mode==6:
         # 1、初始化背景模型
         # 在数据集中随机采样，然后双边滤波
         # 在CrCb通道，计算子数据集中样本各像素点的方差
@@ -549,19 +555,34 @@ def canny_expend_mask(imgs):
     imgs = u_st.numpy2cv(imgs)
     #
     num, h, w, c = imgs.shape
+    #
     masks = np.zeros((num, h,w,1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        dst = cv2.Canny(img, 50, 150)
-        dst = cv2.dilate(dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))
+        #
+        img = cv2.resize(img, (h-4, w-4))
+        bg1, bg2, bg3 = get_bg_bound(img)
+        temp1 = np.ones((h,w),dtype=np.uint8)*bg1
+        temp2 = np.ones((h,w),dtype=np.uint8)*bg2
+        temp3 = np.ones((h,w),dtype=np.uint8)*bg3
+        temp = cv2.merge((temp1, temp2, temp3))
+        temp = temp.astype(np.uint8)
+        temp[2:-2, 2:-2, :] = img
+        
+        dst = cv2.Canny(temp, 50, 150)
+        dst = cv2.dilate(dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))
         dst = 255 - dst
         #u_idsip.show_pic(dst,'2','freedom')
+        
         dst = baweraopen_adapt(dst, intensity = 0.3, alpha = 0.001)
         #u_idsip.show_pic(dst,'3','freedom')
+
         dst = 255 - dst
         dst = baweraopen_adapt(dst, intensity = 0.2, alpha = 0.001)
         #u_idsip.show_pic(dst,'4','freedom')
         dst = cv2.erode( dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))
         #u_idsip.show_pic(dst,'5','freedom')
+
+        #dst = cv2.resize(dst, (h, w))
         masks[idx,:,:,0] = dst
     #
     masks = u_st.cv2numpy(masks)
@@ -572,7 +593,7 @@ def canny_expend_mask(imgs):
 @fun_run_time
 def threshold_OTSU_mask(imgs):
     ''' 
-    对单通道原图大津阈值分割
+    对V通道大津阈值分割
     '''
     u_st._check_imgs(imgs) #[num, c, h, w]
     imgs = u_st.numpy2cv(imgs)
@@ -582,7 +603,7 @@ def threshold_OTSU_mask(imgs):
     for idx, img in enumerate(imgs):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         h,s,v = cv2.split(img)
-        _, dst = cv2.threshold(h, 0, 255, cv2.THRESH_OTSU)
+        _, dst = cv2.threshold(v, 0, 255, cv2.THRESH_OTSU)
         # 图像最外围检测
         temp  = np.mean(dst[0, :])/255.0
         temp += np.mean(dst[-1,:])/255.0
@@ -600,6 +621,68 @@ def threshold_OTSU_mask(imgs):
     masks = u_st.cv2numpy(masks)
     u_st._check_imgs(masks)
     return masks
+
+#背景阈值分割
+@fun_run_time
+def threshold_bg_mask(imgs):
+    ''' 
+    取边缘区域计算背景，再阈值分割
+    '''
+    u_st._check_imgs(imgs) #[num, c, h, w]
+    imgs = u_st.numpy2cv(imgs)
+    #
+    num, h, w, c = imgs.shape
+    masks = np.zeros((num, h,w,1), dtype=np.uint8)
+    for idx, img in enumerate(imgs):
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        h,s,v = cv2.split(img)
+
+        bg1, bg2, bg3 = get_bg_bound(img)
+        v_th = bg3
+        
+        dst = np.where(v < v_th*0.9, 255, 0)
+        dst = np.where(v > v_th*1.1, 255, dst)
+
+        # 图像最外围检测
+        temp  = np.mean(dst[0, :])/255.0
+        temp += np.mean(dst[-1,:])/255.0
+        temp += np.mean(dst[:, 0])/255.0
+        temp += np.mean(dst[:,-1])/255.0
+        temp /= 4
+        if temp > 0.5:
+            dst = 255- dst
+        #形态学处理
+        #dst = Morphological_processing(dst)
+
+        dst = dst.astype(np.uint8)
+        masks[idx,:,:,0] = dst
+    #
+    masks = u_st.cv2numpy(masks)
+    u_st._check_imgs(masks)
+    return masks
+
+
+
+def get_bg_bound(img_cv):
+    '''
+    输入图像，输出外圈平均像素值。与通道模式无关。
+    eg. bg1, bg2, bg3 = get_bg_bound(img)
+    '''
+    h, w, c = img_cv.shape
+    temp1 = img_cv[0,:,:].reshape((w,-1))
+    temp2 = img_cv[-1,:,:].reshape((w,-1))
+    temp3 = img_cv[:,0,:].reshape((h,-1))
+    temp4 = img_cv[:,-1,:].reshape((h,-1))
+    temp5 = np.concatenate((temp1, temp2, temp3, temp4), axis=0)
+    if temp5.shape[1]==3:
+        c1,c2,c3 = temp5[:,0], temp5[:,1], temp5[:,2]
+        bg1 = np.median(c1, axis=0)
+        bg2 = np.median(c2, axis=0)
+        bg3 = np.median(c3, axis=0)
+        return bg1, bg2, bg3
+    else:
+        bg = np.median(temp5, axis=0)
+        return bg
 
 '''
 @fun_run_time
