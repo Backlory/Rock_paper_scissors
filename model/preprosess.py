@@ -42,16 +42,16 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
         PSR_Dataset_label.append(label)
         if readlist_len >20:
             if i % int(readlist_len/10) == int(readlist_len/10)-1:
-                print(f'\t{i+1}/{readlist_len} has been preprocessed...')
+                print(f'\t----{i+1}/{readlist_len} has been preprocessed...')
     toc(t,'data load', readlist_len)
     #
     #转成四维张量
     t=tic()
     PSR_Dataset_img = np.array(PSR_Dataset_img)
     PSR_Dataset_label = np.array(PSR_Dataset_label)
-    print('shapes of images and label:')
-    print(PSR_Dataset_img.shape)
-    print(PSR_Dataset_label.shape)
+    print('\tshapes of images and label:')
+    print('\t',PSR_Dataset_img.shape)
+    print('\t',PSR_Dataset_label.shape)
     toc(t,'list2numpy')
     if savesample:
         temp = PSR_Dataset_img[disp_sample_list, :, :, :]

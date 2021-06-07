@@ -16,7 +16,7 @@ from sklearn.preprocessing import scale
 
 import utils.structure_trans as u_st
 import utils.img_display as u_idsip
-from utils.tools import colorstr, tic, toc   
+from utils.tools import colorstr, tic, toc
 from utils.tools import fun_run_time
 
 
@@ -32,7 +32,7 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     if savesample and ( timenow=='' or disp_sample_list==[]):
         raise(ValueError('timenow and disp_sample_list not given.'))
     #
-    cv2.waitKey(0)
+    #cv2.waitKey(0)
     PSR_Dataset_img_pred = PSR_Dataset_img.copy()
     filedir = 'experiment/'+ timenow +'/'
     
@@ -90,13 +90,7 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         model = classifier_trained_by_img(PSR_Dataset_img[0], region_roi, region_fg, region_bg)
         masks = classifier_mask(PSR_Dataset_img, model)
     elif mode==6:
-        # 1、初始化背景模型
-        # 在数据集中随机采样，然后双边滤波
-        # 在CrCb通道，计算子数据集中样本各像素点的方差
-        # 方差小的像素点，意味着没怎么动过，只受到光照影响，是背景点。
-        # 然后计算背景数据在HSV通道的阈值
-        # 2、利用该阈在yCrCb空间对原始做阈值分割，配合形态学处理，把背景都割掉
-
+        # 1、超像素+聚类？
         # 随机采样双边滤波+中值滤波
         PSR_subDataset_img = PSR_Dataset_img[np.random.choice(range(len(PSR_Dataset_img)), size=100,replace=False)]
         PSR_subDataset_img_cv = u_st.numpy2cv(PSR_subDataset_img)

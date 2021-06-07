@@ -10,6 +10,7 @@ from utils.tools import tic, toc
 
 import model.preprosess as m_pp
 import model.ROI_extract as m_Re
+import model.feature_extract as m_fe
 
 
 if __name__ =='__main__':
@@ -33,7 +34,7 @@ if __name__ =='__main__':
     funlist.append([m_pp.ad_exp_trans, []])
     funlist.append([m_pp.bilateralfilter, []])
     funlist.append([m_pp.median_blur, [9]])
-    PSR_Dataset_img, PSR_Dataset_label = m_pp.Preprosessing(PSR_Dataset,
+    PSR_Dataset_imgs, PSR_Dataset_labels = m_pp.Preprosessing(PSR_Dataset,
                                                             readlist,
                                                             funlist, 
                                                             savesample = True, 
@@ -41,13 +42,17 @@ if __name__ =='__main__':
                                                             disp_sample_list = disp_sample_list)
     # ROI提取
     mode=-1
-    PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
+    PSR_Dataset_imgs = m_Re.ROIextractor(PSR_Dataset_imgs,
                                         mode,
                                         savesample = True, 
                                         timenow = timenow, 
-                                        disp_sample_list = disp_sample_list)
+                                        disp_sample_list = disp_sample_list
+                                        )
     # 特征提取
-
+    mode = 0
+    PSR_Dataset_Vectors = m_fe.Featurextractor(  PSR_Dataset_imgs,
+                                                mode
+                                                )
     # 特征编码
     # 训练集分割
     # 模型初始化
