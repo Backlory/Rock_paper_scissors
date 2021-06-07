@@ -3,11 +3,13 @@
 # 预处理部分。（pic3->pic3)
 import math
 from os import replace
+from sys import api_version
 import cv2
 import random
 import numpy as np
 from matplotlib import pyplot as plt
-from numpy.lib.function_base import place
+from numpy.core.fromnumeric import mean
+from numpy.lib.function_base import median, place
 
 
 from sklearn.preprocessing import scale
@@ -35,30 +37,45 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     filedir = 'experiment/'+ timenow +'/'
     
     #mask获取
-    if mode == 0:
+    if mode == 1:
         #基于椭圆肤色模型
         masks = segskin_ellipse_mask(PSR_Dataset_img)
-    elif mode==1:
+    elif mode==2:
         #canny边缘模型
         masks = canny_expend_mask(PSR_Dataset_img)
-    elif mode==2:
-        #HSV通道otsu阈值模型
-        masks = threshold_OTSU_mask(PSR_Dataset_img)
     elif mode==3:
-        #基于外围框的固定阈值模型
-        masks = threshold_bg_mask(PSR_Dataset_img)
+        #V通道otsu阈值模型
+        masks = threshold_OTSU_mask(PSR_Dataset_img)
     elif mode==4:
+        #基于外围框的固定阈值模型,V通道
+        masks = threshold_bg_mask(PSR_Dataset_img)
+    elif mode==-1:
         #缝合怪模型，多个mask取平均
         PSR_Dataset_img_64 = graylevel_down(PSR_Dataset_img, 4)
         masks1 = segskin_ellipse_mask(PSR_Dataset_img_64)
         masks2 = canny_expend_mask(PSR_Dataset_img_64)
         masks3 = threshold_OTSU_mask(PSR_Dataset_img_64)
-        masks4 = threshold_bg_mask(PSR_Dataset_img_64)
+        masks4 = threshold_bg_mask(PSR_Dataset_img_64, 0.2)
         #
-        masks_muti = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
-        masks_muti = cv2.addWeighted(masks_muti,2/3,masks3,1/3,0)
-        masks_muti = cv2.addWeighted(masks_muti,3/4,masks4,1/4,0)
-        masks = np.where(masks_muti>=255*(0.5), 255, 0) #置信度阈值0.5
+        #masks_muti = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
+        #masks_muti = cv2.addWeighted(masks_muti,2/3,masks3,1/3,0)
+        #masks_muti = cv2.addWeighted(masks_muti,3/4,masks4,1/4,0)
+        masks_muti = masks1*0.4 + masks2*0.2 + masks3*0.2 + masks4*0.2
+        masks_muti = masks_muti.astype(np.uint8)
+        #
+        masks = np.where(masks_muti>=255*(0.25), 255, 0) #置信度阈值0.1
+        for idx, mask in enumerate(masks):
+            temp = Morphological_processing(mask[0,:,:])
+            temp = cv2.dilate(temp, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))   #白色区域膨胀
+            temp = cv2.erode(temp, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))   #白色区域收缩
+            temp[0:2,:] = 0
+            temp[-3:,:] = 0
+            temp[:, 0:2] = 0
+            temp[:, -3:] = 0
+            masks[idx,0,:,:] =temp
+            
+    
+        #
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks1[disp_sample_list, :, :, :]), '02_01_masks1', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks2[disp_sample_list, :, :, :]), '02_01_masks2', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks3[disp_sample_list, :, :, :]), '02_01_masks3', filedir)
@@ -474,7 +491,7 @@ def segskin_ellipse_mask(imgs):
         #plt.show()
         #
         distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
-        mask = np.where(distense <= 1, 255, 0)
+        mask = np.where(distense <= 1, 255, 127/distense)
         #u_idsip.show_pic(mask,'ori',showtype='freedom')
         mask=Morphological_processing(mask)
 
@@ -498,7 +515,7 @@ def segskin_ellipse_mask(imgs):
             x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy) - adapt_x
             y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy) - adapt_y
             distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
-            mask = np.where(distense <= 1, 255, 0)
+            mask = np.where(distense <= 1, 255, 127/distense)
             #u_idsip.show_pic(mask,'after')
             mask=Morphological_processing(mask)
 
@@ -529,21 +546,6 @@ def Morphological_processing(mask):
     #
     mask = np.array(mask, dtype=np.uint8)
     return mask
-# TODO: 
-
-
-# RGB2HSV
-# RGB2YCrCb
-# 色彩空间滤波肤色模型
-
-# 形态学处理：腐蚀膨胀
-
-
-
-#复杂背景：主动轮廓模型snake
-#复杂背景：梯度矢量流主动轮廓模型GVF-snake
-#复杂背景：超像素生长法
-
 
 #canny形态学算子
 @fun_run_time
@@ -559,25 +561,25 @@ def canny_expend_mask(imgs):
     masks = np.zeros((num, h,w,1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
         #
-        img = cv2.resize(img, (h-4, w-4))
+        img = cv2.resize(img, (h-10, w-10))
         bg1, bg2, bg3 = get_bg_bound(img)
         temp1 = np.ones((h,w),dtype=np.uint8)*bg1
         temp2 = np.ones((h,w),dtype=np.uint8)*bg2
         temp3 = np.ones((h,w),dtype=np.uint8)*bg3
         temp = cv2.merge((temp1, temp2, temp3))
         temp = temp.astype(np.uint8)
-        temp[2:-2, 2:-2, :] = img
+        temp[5:-5, 5:-5, :] = img
         
         dst = cv2.Canny(temp, 50, 150)
         dst = cv2.dilate(dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))
         dst = 255 - dst
         #u_idsip.show_pic(dst,'2','freedom')
         
-        dst = baweraopen_adapt(dst, intensity = 0.3, alpha = 0.001)
+        dst = baweraopen_adapt(dst, intensity = 0.4, alpha = 0.001) 
         #u_idsip.show_pic(dst,'3','freedom')
 
         dst = 255 - dst
-        dst = baweraopen_adapt(dst, intensity = 0.2, alpha = 0.001)
+        #dst = baweraopen_adapt(dst, intensity = 0.1, alpha = 0.001)
         #u_idsip.show_pic(dst,'4','freedom')
         dst = cv2.erode( dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))
         #u_idsip.show_pic(dst,'5','freedom')
@@ -613,7 +615,7 @@ def threshold_OTSU_mask(imgs):
         if temp > 0.5:
             dst = 255- dst
         #形态学处理
-        dst = Morphological_processing(dst)
+        #dst = Morphological_processing(dst)
 
         dst = dst.astype(np.uint8)
         masks[idx,:,:,0] = dst
@@ -622,11 +624,12 @@ def threshold_OTSU_mask(imgs):
     u_st._check_imgs(masks)
     return masks
 
-#背景阈值分割
+#背景边缘阈值分割
 @fun_run_time
-def threshold_bg_mask(imgs):
+def threshold_bg_mask(imgs, alpha=0.2):
     ''' 
     取边缘区域计算背景，再阈值分割
+    alpha代表容差限度
     '''
     u_st._check_imgs(imgs) #[num, c, h, w]
     imgs = u_st.numpy2cv(imgs)
@@ -640,8 +643,8 @@ def threshold_bg_mask(imgs):
         bg1, bg2, bg3 = get_bg_bound(img)
         v_th = bg3
         
-        dst = np.where(v < v_th*0.9, 255, 0)
-        dst = np.where(v > v_th*1.1, 255, dst)
+        dst = np.where(v < v_th*(1-alpha), 255, 0)
+        dst = np.where(v > v_th*(1+alpha), 255, dst)
 
         # 图像最外围检测
         temp  = np.mean(dst[0, :])/255.0

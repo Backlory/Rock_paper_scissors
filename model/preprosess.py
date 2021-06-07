@@ -72,9 +72,26 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
     #处理结束
     return PSR_Dataset_img, PSR_Dataset_label
 
+#双边滤波
+@fun_run_time
+def bilateralfilter(imgs, arg, size=3):    
+    ''' 
+    双边滤波，保留边缘
+    '''
+    u_st._check_imgs(imgs)
+    imgs = u_st.numpy2cv(imgs)
+    #
+    imgs_new = np.zeros_like(imgs,  dtype=np.uint8)
+    for idx, img in enumerate(imgs):
+        dst = cv2.bilateralFilter(img, 5, 20, 0)
+        imgs_new[idx, :, :, :] = dst
+    #
+    imgs_new = u_st.cv2numpy(imgs_new)
+    u_st._check_imgs(imgs_new)
+    return imgs_new
 
 # 中值滤波     MidBlur
-#@fun_run_time
+@fun_run_time
 def median_blur(imgs, arg, size=3):    
     ''' 
     中值模糊  对椒盐噪声有去燥效果。输入numpy图片

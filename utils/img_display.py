@@ -44,9 +44,9 @@ def save_pic(data,filename,filedir = ''):
         prepare_path(filedir)
         temp = './'+ filedir + filename + '.png'
         img.save(temp)  #【】【】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】】【】
-        print(f'\t\timage saved in {temp}')
+        print(f'\t----image saved in {temp}')
     except:
-        print('\t\tfile dir error')
+        print('\t----file dir error')
 
 
 def show_pic(data,windowname = 'default',showtype='freeze'):
