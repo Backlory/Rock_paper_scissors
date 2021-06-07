@@ -472,11 +472,25 @@ def segskin_ellipse_mask(imgs):
         #u_idsip.show_pic(mask,'ori',showtype='freedom')
         mask=Morphological_processing(mask)
 
-        if np.mean(mask)/255<0.05:
-            adapt_x = 13
-            adapt_y = -18
+        #
+        '''
+        m = cv2.moments(mask)
+        if m['m00'] != 0:
+            x = m['m10']/m['m00']
+            y = m['m01']/m['m00']
+        else:
+            x = 0
+            y = 0
+        print('x=',x, 'y=',y)
+        temp = cv2.circle(mask, (int(x),int(y)), 5, 127, 5)
+        #cv2.imshow('out',temp)
+        #cv2.waitKey(0)'''
+
+        if np.mean(mask)/255<0.1: #另一张背景
+            adapt_x = 15
+            adapt_y = 21
             x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy) - adapt_x
-            y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy) -adapt_y
+            y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy) - adapt_y
             distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
             mask = np.where(distense <= 1, 255, 0)
             #u_idsip.show_pic(mask,'after')
