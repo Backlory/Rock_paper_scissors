@@ -19,11 +19,11 @@ if __name__ =='__main__':
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data/data_my') # data_origin,  data_my, data_test
     #readlist = list(range(0, 120)) + list(range(840, 960)) + list(range(1680, 1800))
-    readlist = list(range(len(PSR_Dataset)))
+    readlist = np.random.choice(range(len(PSR_Dataset)), 100).tolist()
     #readlist = [120*x for x in [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]]
     #readlist = list(range(16))
     
-    disp_sample_list = random.sample(range(len(readlist)), 9) #9,16,64
+    disp_sample_list = random.sample(range(len(readlist)), 16) #9,16,64
     #disp_sample_list = range(16)
     
     
@@ -39,7 +39,7 @@ if __name__ =='__main__':
                                                             timenow = timenow, 
                                                             disp_sample_list = disp_sample_list)
     # ROI提取
-    mode=5
+    mode=0
     PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
                                         mode,
                                         savesample = True, 

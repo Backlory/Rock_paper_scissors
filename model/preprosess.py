@@ -15,7 +15,7 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
     '''
     输入：数据集对象，一系列预处理函数
 
-    输出：按顺序预处理好的数据集与标签，numpy矩阵
+    输出：按顺序预处理好的数据集与标签，图像是np+rgb
     '''
     print(colorstr('='*50, 'red'))
     print(colorstr('Preprocess...'))
@@ -37,7 +37,7 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
         if h != h_std or w != w_std:
             img = cv2.resize(img, (h_std,w_std))
         
-        img = u_st.cv2numpy(img)    #channal, height, width
+        img = u_st.cv2numpy(img)    #channal, height, width，RGB
         PSR_Dataset_img.append(img)
         PSR_Dataset_label.append(label)
         if readlist_len >20:
@@ -133,13 +133,13 @@ def equalizeHist(imgs, arg=[],type='CLAHE'):
     #
     imgs_new = np.zeros_like(imgs,  dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         if type == 'HE':
             img_hsv[:, :, 0] = cv2.equalizeHist(img_hsv[:, :, 0])
         elif type == 'CLAHE':
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             img_hsv[:, :, 0] = clahe.apply(img_hsv[:, :, 0])
-        dst = cv2.cvtColor(img_hsv, cv2.COLOR_YUV2BGR)
+        dst = cv2.cvtColor(img_hsv, cv2.COLOR_YUV2RGB)
         
         imgs_new[idx, :, :, :] = dst
     #
@@ -151,7 +151,7 @@ def equalizeHist(imgs, arg=[],type='CLAHE'):
 def ad_exp_trans(imgs, arg=[]):
     ''' 
     基于高斯模糊的自适应指数变换，消除光照不均衡阴影
-    输入图片numpy图片
+    输入图片numpy图片,rgb
     '''
     u_st._check_imgs(imgs)
     imgs = u_st.numpy2cv(imgs)
@@ -169,11 +169,13 @@ def ad_exp_trans(imgs, arg=[]):
         alpha_base = np.clip(temp, 0.5, 0.99)
         #print(alpha_base)
         
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)#【】【】【】【】【】【】【】【】【】【】【】【】【】【】【】【】【】【】
+        #cv2.imshow('tm', img)
+        #cv2.imshow('tm', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        #cv2.waitKey(0)
         h, s, v = cv2.split(hsv)
         v = v / 255.0
         for i in range(3):
-            
             gaus = cv2.GaussianBlur(v, (21, 21), 100, 21)*1.0
             gaus_median = np.mean(gaus)
             alpha = np.power(alpha_base, (1 - gaus/gaus_median)) # 进行指数变换
@@ -196,7 +198,7 @@ def ad_exp_trans(imgs, arg=[]):
 
         v = np.array(v*255, dtype=np.uint8)
         hsv = cv2.merge([h, s, v])
-        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
         imgs_new[idx, :, :, :] = rgb
         #
         if len(imgs)>10:

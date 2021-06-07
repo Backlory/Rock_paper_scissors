@@ -21,7 +21,7 @@ from utils.tools import fun_run_time
 @fun_run_time
 def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_sample_list=[]):
     '''
-    输入：4d图片集，(num, c, h, w)
+    输入：4d图片集，(num, c, h, w).rgb图片。
 
     输出：被剪除mask部分的4d图片集，(num, c, h, w)
     '''
@@ -30,6 +30,7 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     if savesample and ( timenow=='' or disp_sample_list==[]):
         raise(ValueError('timenow and disp_sample_list not given.'))
     #
+    cv2.waitKey(0)
     PSR_Dataset_img_pred = PSR_Dataset_img.copy()
     filedir = 'experiment/'+ timenow +'/'
     
@@ -46,11 +47,8 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     elif mode==3:
         #缝合怪模型，多个mask取平均
         masks1 = segskin_ellipse_mask(PSR_Dataset_img)
-        #u_idsip.show_pic(masks1[0,:,:,:])
         masks2 = canny_expend_mask(PSR_Dataset_img)
-        #u_idsip.show_pic(masks1[0,:,:,:])
         masks3 = threshold_OTSU_mask(PSR_Dataset_img)
-        #u_idsip.show_pic(masks1[0,:,:,:])
         #
         masks_ = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
         masks = cv2.addWeighted(masks_,0.666,masks3,0.333,0)
@@ -65,18 +63,26 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     elif mode==5:
         # 1、初始化背景模型
         # 在数据集中随机采样，然后双边滤波
-        # 在CrCb通道，计算样本各像素点的【区域配准方差】。
-        # 【区域配准方差】，a图m点与b图m点之间的方差 = a图m点3*3区域与b图m点3*3区域，两两结合后得到的最小值
-        # 方差小的像素点，意味着没怎么动过，只受到光照影响。
-        # 然后在yCrCb空间用阈值取形态学保留外环形成背景。
+        # 在CrCb通道，计算子数据集中样本各像素点的方差
+        # 方差小的像素点，意味着没怎么动过，只受到光照影响，是背景点。
         # 然后计算背景数据在HSV通道的阈值
-        # 2、利用该阈值对原始做阈值分割，把背景都割掉
+        # 2、利用该阈在yCrCb空间对原始做阈值分割，配合形态学处理，把背景都割掉
+
+        # 随机采样双边滤波+中值滤波
         PSR_subDataset_img = PSR_Dataset_img[np.random.choice(range(len(PSR_Dataset_img)), size=100,replace=False)]
         PSR_subDataset_img_cv = u_st.numpy2cv(PSR_subDataset_img)
         for idx, img_cv in enumerate(PSR_subDataset_img_cv):
-            img_cv = cv2.bilateralFilter(img_cv, 0, 100, 5)
-            u_idsip.show_pic(u_st.cv2numpy(img_cv))
-        pass
+            img_cv = cv2.bilateralFilter(img_cv, 3, 20, 0)
+            img_cv = cv2.medianBlur(img_cv,9)
+            #u_idsip.show_pic(u_st.cv2numpy(img_cv))
+            img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2YCR_CB)
+            PSR_subDataset_img_cv[idx] = img_cv
+        # 计算方差获取目标背景区域
+
+        PSR_subDataset_img_var = np.var(PSR_subDataset_img_cv, axis = 0)
+
+        np.percentile(PSR_subDataset_img_var, 90)
+
         
         
     if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_01_mask', filedir)
@@ -111,7 +117,7 @@ def classifier_mask(imgs, model):
         img = cv2.resize(img, (obj_h,obj_w))
         u_idsip.show_pic(u_st.cv2numpy(img))
 
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2YCR_CB)
         img = img[:,:,1:]
         
         x_test = img.reshape((obj_h*obj_w, -1))
@@ -157,7 +163,7 @@ def classifier_trained_by_img(img, region_roi, region_fg, region_bg):
 
     img_cv = graylevel_down(img_cv, 16)
 
-    img_ycrcb_cv = cv2.cvtColor(img_cv, cv2.COLOR_BGR2YCR_CB)   #转ycrcb
+    img_ycrcb_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2YCR_CB)   #转ycrcb
     img_ycrcb_cv = img_ycrcb_cv[:,:,1:]                         #取crcb
     h,w,c = img_ycrcb_cv.shape 
     img_ycrcb_cv = np.reshape(img_ycrcb_cv, (h*w,c))
@@ -318,7 +324,7 @@ def rgb2HSV(imgs):
     num, h, w, c = imgs.shape
     imgs_new = np.zeros((num, h, w, 3), dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        imgs_new[idx, :, :, :] = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        imgs_new[idx, :, :, :] = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
     #
     imgs_new = u_st.cv2numpy(imgs_new)
     u_st._check_imgs(imgs_new)
@@ -333,7 +339,7 @@ def rgb2YCrCb(imgs):
     num, h, w, c = imgs.shape
     imgs_new = np.zeros((num, h, w, 3), dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        imgs_new[idx, :, :, :] = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+        imgs_new[idx, :, :, :] = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
     #
     imgs_new = u_st.cv2numpy(imgs_new)
     u_st._check_imgs(imgs_new)
@@ -417,7 +423,7 @@ def segskin_ellipse_mask(imgs):
     
     masks = np.zeros((num, h, w, 1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2YCR_CB)
         Y, Cr, Cb = cv2.split(img)
         #
         '''
@@ -550,7 +556,7 @@ def threshold_OTSU_mask(imgs):
     num, h, w, c = imgs.shape
     masks = np.zeros((num, h,w,1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
         h,s,v = cv2.split(img)
         _, dst = cv2.threshold(h, 0, 255, cv2.THRESH_OTSU)
         # 图像最外围检测
