@@ -7,6 +7,8 @@ import random
 import numpy as np
 
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import scale
+from sklearn.preprocessing import MinMaxScaler
 
 import utils.structure_trans as u_st
 import utils.img_display as u_idsip
@@ -14,35 +16,60 @@ from utils.tools import colorstr, tic, toc
 from utils.tools import fun_run_time
 
 @fun_run_time
-def Featurencoder(datas, labels, mode = 0):
+def Featurencoder(datas, labels, mode = 0, onehot=False):
     '''
     输入：
-    datas=特征列表，列表内num个元素，每个元素代表一幅图的特征值矩阵
-    labels=标签numpy矩阵
+    datas=N个元素的特征列表，每个元素代表一幅图的特征值矩阵
+    labels=N个元素的标签矩阵,numpy，1维
 
-    输出：X_dataset,  Y_dataset，代表训练集向量，N个*m维特征矩阵，N个*K类独热编码
+    输出：X_dataset,  Y_dataset，代表训练集向量，N个*m维特征矩阵，N个*K类的二维独热编码
     '''
     print(colorstr('='*50, 'red'))
     print(colorstr('Feature encoding...'))
     #
-    num = len(datas)
-    assert(num == len(labels))
+    N = len(datas)
+    assert(N == len(labels))
 
     #X_dataset
     X_dataset=0
     if mode == 0:
-        #圆形度
-        pass
+        #直接输出
+        X_dataset = np.array(datas)
+        X_dataset = scale(X_dataset)                        #标准化
+        #min_max_scaler = MinMaxScaler()                    #归一化
+        #X_dataset = min_max_scaler.fit_transform(X_dataset)
+
     elif mode==1:
-        #Hu不变矩
+        #
         pass
 
     #Y_dataset
-    ohe = OneHotEncoder()
-    ohe.fit(labels)
-    Y_dataset = ohe.transform(labels)
+    if onehot:
+        ohe = OneHotEncoder()
+        labels = labels[:, np.newaxis]
+        ohe.fit(labels)
+        Y_dataset = ohe.transform(labels).toarray()
+    else:
+        Y_dataset = labels
     #处理结束
     return X_dataset,  Y_dataset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # TODO:
 # 生成词袋字典K=300
