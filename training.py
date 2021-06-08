@@ -10,12 +10,13 @@ from sklearn.preprocessing import MinMaxScaler
 
 import utils.img_display as u_idsip
 from utils.tools import tic, toc
+from weights.weightio import save_obj
 #
 import model.preprosess as m_pp
 import model.ROI_extract as m_Re
 import model.feature_extract as m_fet
 import model.feature_encode as m_fed
-import model.classification as m_cl
+import model.train_strategy as m_ts
 
 
 if __name__ =='__main__':
@@ -76,27 +77,8 @@ if __name__ =='__main__':
     #scaler = MinMaxScaler().fit(x_train)                       #归一化
     x_train = scaler.transform(x_train)
 
-    # 模型初始化
-    classifier = m_cl.classification
     # 模型训练
+    classifier = m_ts.fit(x_train, y_train, mode = 1)
     # 权重文件保存
+    save_obj(classifier, 'weights\\mode_1.joblib')
 
-
-#TODO: 下边这段代码是视频形式显示删了，不需要了
-'''
-    for i in range(120*3):
-        #
-        img = PSR_Dataset_img[i]
-        label = PSR_Dataset_label[i]
-        #
-        #img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        
-        ret, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
-        #img = cv2.Canny(img, 60,200)
-
-        #contours, hierarchy = cv2.findContours(img,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  
-        #img = cv2.drawContours(img, contours,-1,(255,255,255),thickness=-1)  #边缘框
-
-        cv2.imshow('a', img)
-        cv2.waitKey(10)
-        '''
