@@ -49,11 +49,13 @@ if __name__ =='__main__':
                                         disp_sample_list = disp_sample_list
                                         )
     # 特征提取
-    mode = 0
-    PSR_Dataset_Vectors = m_fe.Featurextractor(  PSR_Dataset_imgs,
+    mode = 1
+    PSR_Dataset_Vectors_list = m_fe.Featurextractor(  PSR_Dataset_imgs,
                                                 mode
                                                 )
+    print(PSR_Dataset_Vectors_list)
     # 特征编码
+
     # 训练集分割
     # 模型初始化
     # 模型训练
