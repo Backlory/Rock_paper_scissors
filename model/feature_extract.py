@@ -82,7 +82,7 @@ def fea_circularity(img_cv):
         Vectors = a / b
     except:
         Vectors = 0
-    return Vectors
+    return np.array(Vectors)
 
 #Hu不变矩
 def fea_hu_moments(img_cv):
@@ -93,6 +93,7 @@ def fea_hu_moments(img_cv):
     img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
     moments = cv2.moments(img_cv)   #支持自动转换，非零像素默认为1，计算图像的三阶以内的矩
     humoments = cv2.HuMoments(moments) #计算Hu不变矩
+    humoments = humoments[:,0]
     humoments = np.log10(np.abs(humoments))
     return humoments
 

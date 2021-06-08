@@ -29,10 +29,11 @@ def Featurencoder(datas, labels, mode = 0, onehot=False):
     assert(N == len(labels))
 
     #X_dataset
-    X_dataset=0
     if mode == 0:
         #直接输出
         X_dataset = np.array(datas)
+        if len(X_dataset.shape) == 1:
+            X_dataset = X_dataset[:, np.newaxis]
     elif mode==1:
         #
         pass

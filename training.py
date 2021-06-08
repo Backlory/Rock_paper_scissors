@@ -55,13 +55,13 @@ if __name__ =='__main__':
                                         disp_sample_list = disp_sample_list
                                         )
     # 特征提取
-    mode = 1
+    mode = 0
     PSR_Dataset_Vectors_list = m_fet.Featurextractor(   PSR_Dataset_imgs,
                                                         mode
                                                         )
     
     # 特征编码
-    mode = 1
+    mode = 0
     X_dataset,  Y_dataset= m_fed.Featurencoder(     PSR_Dataset_Vectors_list,
                                                     PSR_Dataset_labels,
                                                     mode
@@ -81,4 +81,4 @@ if __name__ =='__main__':
     classifier = m_ts.fit(x_train, y_train, mode = 1)
     # 权重文件保存
     save_obj(classifier, 'weights\\mode_1.joblib')
-
+    print()

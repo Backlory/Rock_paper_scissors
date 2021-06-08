@@ -4,8 +4,7 @@ import joblib #大模型也能存，速度都挺快，优选
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/' + '..'))
-from utils.tools import tic, toc
-
+from utils.tools import tic, toc, colorstr
 
 
 def save_obj(obj, path):
@@ -13,12 +12,15 @@ def save_obj(obj, path):
     save_obj(a, 'weights\\2.joblib')
     '''
     joblib.dump(filename=path, value=obj)
+    print(colorstr('mode saved.'))
+    
 
 
 def load_obj(path):
     '''
     model1 = load_obj('weights\\2.joblib')
     '''
+    print(colorstr('mode loaded.'))
     return joblib.load(filename=path)
 
 
