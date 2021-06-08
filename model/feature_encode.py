@@ -7,8 +7,6 @@ import random
 import numpy as np
 
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.preprocessing import scale
-from sklearn.preprocessing import MinMaxScaler
 
 import utils.structure_trans as u_st
 import utils.img_display as u_idsip
@@ -35,10 +33,6 @@ def Featurencoder(datas, labels, mode = 0, onehot=False):
     if mode == 0:
         #直接输出
         X_dataset = np.array(datas)
-        X_dataset = scale(X_dataset)                        #标准化
-        #min_max_scaler = MinMaxScaler()                    #归一化
-        #X_dataset = min_max_scaler.fit_transform(X_dataset)
-
     elif mode==1:
         #
         pass
@@ -51,6 +45,7 @@ def Featurencoder(datas, labels, mode = 0, onehot=False):
         Y_dataset = ohe.transform(labels).toarray()
     else:
         Y_dataset = labels
+
     #处理结束
     return X_dataset,  Y_dataset
 

@@ -4,14 +4,18 @@ import random
 import data.data_loading
 from datetime import datetime
 
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+
 import utils.img_display as u_idsip
 from utils.tools import tic, toc
-
-
+#
 import model.preprosess as m_pp
 import model.ROI_extract as m_Re
 import model.feature_extract as m_fet
 import model.feature_encode as m_fed
+import model.classification as m_cl
 
 
 if __name__ =='__main__':
@@ -51,15 +55,29 @@ if __name__ =='__main__':
                                         )
     # 特征提取
     mode = 1
-    PSR_Dataset_Vectors_list = m_fet.Featurextractor(  PSR_Dataset_imgs,
-                                                mode
-                                                )
-    print(PSR_Dataset_Vectors_list)
+    PSR_Dataset_Vectors_list = m_fet.Featurextractor(   PSR_Dataset_imgs,
+                                                        mode
+                                                        )
+    
     # 特征编码
     mode = 1
-    X_dataset,  Y_dataset= m_fed.Featurencoder(PSR_Dataset_Vectors_list,PSR_Dataset_labels, mode)
+    X_dataset,  Y_dataset= m_fed.Featurencoder(     PSR_Dataset_Vectors_list,
+                                                    PSR_Dataset_labels,
+                                                    mode
+                                                    )
+    
     # 训练集分割
+    x_train, x_test, y_train, y_test = train_test_split(    X_dataset,
+                                                            Y_dataset,
+                                                            test_size=0.3,
+                                                            random_state=999
+                                                            )
+    scaler = StandardScaler().fit(x_train)                     #标准化
+    #scaler = MinMaxScaler().fit(x_train)                       #归一化
+    x_train = scaler.transform(x_train)
+
     # 模型初始化
+    classifier = m_cl.classification
     # 模型训练
     # 权重文件保存
 
