@@ -7,10 +7,10 @@ class PSR_Dataset(Dataset):
     def __init__(self, dataset_path):
         self.data_paths_list = []
         self.data_labels_list = []
-        self.num2label = {  0:'others',
-                            1:'paper',
-                            2:'scissors',
-                            3:'rock'
+        self.num2label = {  3:'others',
+                            0:'paper',
+                            1:'scissors',
+                            2:'rock'
                             }
         self.dataset_paths = [self.num2label[x] for x in range(len(self.num2label))] #按顺序获取num2label中的键值
         self.dataset_paths = [os.path.join(dataset_path, label) for label in self.dataset_paths] #将键值转成路径，因为路径是以文件夹命名

@@ -57,7 +57,7 @@ if __name__ =='__main__':
     print(PSR_Dataset_Vectors_list)
     # 特征编码
     mode = 1
-    X_dataset,  Y_dataset= m_fed.Featurencoder(PSR_Dataset_Vectors_list, PSR_Dataset_labels, mode)
+    X_dataset,  Y_dataset= m_fed.Featurencoder(PSR_Dataset_Vectors_list,PSR_Dataset_labels, mode)
     # 训练集分割
     # 模型初始化
     # 模型训练

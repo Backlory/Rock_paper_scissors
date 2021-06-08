@@ -6,6 +6,8 @@ import cv2
 import random
 import numpy as np
 
+from sklearn.preprocessing import OneHotEncoder
+
 import utils.structure_trans as u_st
 import utils.img_display as u_idsip
 from utils.tools import colorstr, tic, toc
@@ -16,7 +18,7 @@ def Featurencoder(datas, labels, mode = 0):
     '''
     输入：
     datas=特征列表，列表内num个元素，每个元素代表一幅图的特征值矩阵
-    labels=标签numpy矩阵，
+    labels=标签numpy矩阵
 
     输出：X_dataset,  Y_dataset，代表训练集向量，N个*m维特征矩阵，N个*K类独热编码
     '''
@@ -27,6 +29,7 @@ def Featurencoder(datas, labels, mode = 0):
     assert(num == len(labels))
 
     #X_dataset
+    X_dataset=0
     if mode == 0:
         #圆形度
         pass
@@ -35,7 +38,9 @@ def Featurencoder(datas, labels, mode = 0):
         pass
 
     #Y_dataset
-
+    ohe = OneHotEncoder()
+    ohe.fit(labels)
+    Y_dataset = ohe.transform(labels)
     #处理结束
     return X_dataset,  Y_dataset
 
