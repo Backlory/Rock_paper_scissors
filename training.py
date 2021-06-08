@@ -10,7 +10,8 @@ from utils.tools import tic, toc
 
 import model.preprosess as m_pp
 import model.ROI_extract as m_Re
-import model.feature_extract as m_fe
+import model.feature_extract as m_fet
+import model.feature_encode as m_fed
 
 
 if __name__ =='__main__':
@@ -50,12 +51,13 @@ if __name__ =='__main__':
                                         )
     # 特征提取
     mode = 1
-    PSR_Dataset_Vectors_list = m_fe.Featurextractor(  PSR_Dataset_imgs,
+    PSR_Dataset_Vectors_list = m_fet.Featurextractor(  PSR_Dataset_imgs,
                                                 mode
                                                 )
     print(PSR_Dataset_Vectors_list)
     # 特征编码
-
+    mode = 1
+    X_dataset,  Y_dataset= m_fed.Featurencoder(PSR_Dataset_Vectors_list, PSR_Dataset_labels, mode)
     # 训练集分割
     # 模型初始化
     # 模型训练
