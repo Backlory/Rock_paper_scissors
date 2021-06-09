@@ -506,6 +506,13 @@ def Morphological_processing(mask):
     输出：形态学处理好后的2d图片
     '''
     mask = np.array(mask, dtype=np.uint8)
+    h, w = mask.shape
+    bg = get_bg_bound(mask)   #扩张，防止边缘被丢弃
+    
+    temp = np.zeros((h+8, w+8), dtype=np.uint8)
+    temp[:,:,0] =bg
+    mask[4:-4, 4:-4, :] = mask
+        
     #
     mask = cv2.dilate(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域膨胀
     mask = cv2.erode(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域收缩
@@ -533,15 +540,13 @@ def canny_expend_mask(imgs):
     masks = np.zeros((num, h,w,1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
         #
-        img = cv2.resize(img, (h-10, w-10))
-        bg1, bg2, bg3 = get_bg_bound(img)
-        temp1 = np.ones((h,w),dtype=np.uint8)*bg1
-        temp2 = np.ones((h,w),dtype=np.uint8)*bg2
-        temp3 = np.ones((h,w),dtype=np.uint8)*bg3
-        temp = cv2.merge((temp1, temp2, temp3))
-        temp = temp.astype(np.uint8)
+        bg1, bg2, bg3 = get_bg_bound(img)   #扩张，防止边缘被丢弃
+        temp = np.zeros((h+10, w+10, c), dtype=np.uint8)
+        temp[:,:,0] = bg1
+        temp[:,:,1] = bg2
+        temp[:,:,2] = bg3
         temp[5:-5, 5:-5, :] = img
-        
+
         dst = cv2.Canny(temp, 50, 150)
         dst = cv2.dilate(dst, kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))
         dst = 255 - dst
@@ -557,6 +562,8 @@ def canny_expend_mask(imgs):
         #u_idsip.show_pic(dst,'5','freedom')
 
         #dst = cv2.resize(dst, (h, w))
+        
+        dst = dst[5:-5, 5:-5]
         masks[idx,:,:,0] = dst
     #
     masks = u_st.cv2numpy(masks)
@@ -640,7 +647,7 @@ def threshold_bg_mask(imgs, alpha=0.2):
 
 def get_bg_bound(img_cv):
     '''
-    输入图像，输出外圈平均像素值。与通道模式无关。
+    输入三维图像，输出外圈平均像素值。与通道模式无关。若图像为单通道图片，则为(h, w, 1)即可
     eg. bg1, bg2, bg3 = get_bg_bound(img)
     '''
     h, w, c = img_cv.shape
@@ -656,6 +663,7 @@ def get_bg_bound(img_cv):
         bg3 = np.median(c3, axis=0)
         return bg1, bg2, bg3
     else:
+        temp5 = temp5[:,0]
         bg = np.median(temp5, axis=0)
         return bg
 
