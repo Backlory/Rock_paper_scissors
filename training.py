@@ -22,7 +22,7 @@ import model.train_strategy as m_ts
 if __name__ =='__main__':
     # 变量准备
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
-    experiment_data = 'data_my'   #data_origin,  data_my, data_test
+    experiment_data = 'data_origin'   #data_origin,  data_my, data_test
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data/'+str(experiment_data)) #
@@ -80,7 +80,7 @@ if __name__ =='__main__':
     from sklearn.model_selection import StratifiedKFold          
     from sklearn.metrics import classification_report                         
     from sklearn.metrics import confusion_matrix                         
-    skf = StratifiedKFold(n_splits=4, shuffle = True,random_state=999) #交叉验证，分层抽样
+    skf = StratifiedKFold(n_splits=10, shuffle = True,random_state=999) #交叉验证，分层抽样
     for train_index, test_index in skf.split(X_dataset, Y_dataset):
         
         #获取数据
@@ -108,6 +108,9 @@ if __name__ =='__main__':
         print(classification_report(y_test, y_pred, zero_division=1))
         print(confusion_matrix(y_test, y_pred))
         print('='*20)
+        
+        save_obj(PSR_Dataset_imgs, 'weights\\Dataset_imgs_'+ experiment_data +'.joblib')
+        
         
 
     # 权重文件保存

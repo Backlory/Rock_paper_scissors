@@ -67,10 +67,10 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         #masks_muti = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
         #masks_muti = cv2.addWeighted(masks_muti,2/3,masks3,1/3,0)
         #masks_muti = cv2.addWeighted(masks_muti,3/4,masks4,1/4,0)
-        masks_muti = masks1*0.4 + masks2*0.2 + masks3*0.2 + masks4*0.2
+        masks_muti = masks1*0.4 + masks2*0.25 + masks3*0.25 + masks4*0.1
         masks_muti = masks_muti.astype(np.uint8)
         #
-        masks = np.where(masks_muti>=255*(0.25), 255, 0) #置信度阈值0.1
+        masks = np.where(masks_muti>=255*(0.2), 255, 0) #置信度阈值0.2
         for idx, mask in enumerate(masks):
             temp = Morphological_processing(mask[0,:,:])
             temp = cv2.dilate(temp, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7, 7)))   #白色区域膨胀
@@ -505,14 +505,13 @@ def Morphological_processing(mask):
     输入：2d图片，
     输出：形态学处理好后的2d图片
     '''
-    mask = np.array(mask, dtype=np.uint8)
     h, w = mask.shape
-    bg = get_bg_bound(mask)   #扩张，防止边缘被丢弃
-    
-    temp = np.zeros((h+8, w+8), dtype=np.uint8)
-    temp[:,:,0] =bg
-    mask[4:-4, 4:-4, :] = mask
-        
+    temp = np.zeros((h+10, w+10), dtype=np.uint8) #扩张，防止边缘被丢弃
+    bg = get_bg_bound(mask[:,:,np.newaxis])  
+    bg = 0 if bg<127 else 255
+    temp[:,:] =bg
+    temp[5:-5, 5:-5] = mask
+    mask = temp
     #
     mask = cv2.dilate(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域膨胀
     mask = cv2.erode(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域收缩
@@ -523,6 +522,7 @@ def Morphological_processing(mask):
     mask = 255 - mask
     mask = cv2.erode(mask, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)))   #白色区域收缩
     #
+    mask = mask[5:-5, 5:-5]
     mask = np.array(mask, dtype=np.uint8)
     return mask
 
