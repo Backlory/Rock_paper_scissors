@@ -25,9 +25,12 @@ from utils.tools import fun_run_time
 @fun_run_time
 def Featurextractor(PSR_Dataset_img, mode = 0):
     '''
-    输入：被剪除mask部分的4d图片集，(num, c, h, w),RGB
-
-    输出：特征列表，列表内每个元素都是矩阵。
+    输入：被剪除mask部分的4d图片集，(num, c, h, w),RGB\n
+    mode\n
+    1=圆形度\n
+    2=Hu不变矩\n
+    \n
+    输出：特征列表，列表内每个元素都是矩阵。\n
     '''
     print(colorstr('='*50, 'red'))
     print(colorstr('Feature extracting...'))
@@ -59,7 +62,7 @@ def get_Vectors(imgs, func, **kwargs):
         temp = func(img, **kwargs)
         result.append(temp)
         if idx % int(img_num/10) == int(img_num/10)-1:
-            print(f'\t----{idx+1}/{img_num} has been preprocessed...')
+            print(f'\t----{idx+1}/{img_num} has been extracted...')
     #
     #result = np.array(result) #对于同长度向量而言可以转化为array，对于sift等视觉词特征则不行
     toc(t, func.__name__, img_num)
@@ -75,6 +78,7 @@ def fea_circularity(img_cv):
     '''
     img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
     img_cv[img_cv>0]=255
+    #
     contours, _ = cv2.findContours(img_cv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     a = cv2.contourArea(contours[0]) * 4 * math.pi      #面积
     b = math.pow(cv2.arcLength(contours[0], True), 2)   #周长
@@ -87,14 +91,16 @@ def fea_circularity(img_cv):
 #Hu不变矩
 def fea_hu_moments(img_cv):
     '''
-    计算Hu不变矩。输入cv图片，RGB
+    计算Hu不变矩的负对数。输入cv图片，RGB
     '''
     #
     img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
+    img_cv[img_cv>0]=255
+    #
     moments = cv2.moments(img_cv)   #支持自动转换，非零像素默认为1，计算图像的三阶以内的矩
     humoments = cv2.HuMoments(moments) #计算Hu不变矩
     humoments = humoments[:,0]
-    humoments = np.log10(np.abs(humoments))
+    humoments = -np.log10(np.abs(humoments))
     return humoments
 
 # 质心提取

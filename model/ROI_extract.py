@@ -23,8 +23,15 @@ from utils.tools import fun_run_time
 @fun_run_time
 def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_sample_list=[]):
     '''
-    输入：4d图片集，(num, c, h, w).rgb图片。
-
+    输入：4d图片集，(num, c, h, w).rgb图片。\n
+    mode\n
+    1=椭圆肤色模型\n
+    2=canny边缘模型\n
+    3=v通道otsu阈值模型\n
+    4=基于外围框检测的otsu模型\n
+    5=主动网格区域分类器模型\n
+    6=固定阈值分割\n
+    -1=联合1、2、3、4的分割\n
     输出：被剪除mask部分的4d图片集，(num, c, h, w)
     '''
     print(colorstr('='*50, 'red'))
@@ -84,29 +91,26 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
 
         #u_idsip.show_pic(masks[0,:,:,:])
     elif mode==5:
-        # 基于像素值分类器的主动网格背景模型。有缺陷，即不能对肤色做处理
+        # 基于像素值分类器的主动网格背景模型。有缺陷，不能用
         len(PSR_Dataset_img)
         region_roi, region_fg, region_bg = get_area_by_mouse(PSR_Dataset_img[0])
         model = classifier_trained_by_img(PSR_Dataset_img[0], region_roi, region_fg, region_bg)
         masks = classifier_mask(PSR_Dataset_img, model)
-    elif mode==6:
-        # 1、超像素+聚类？
-        # 随机采样双边滤波+中值滤波
-        PSR_subDataset_img = PSR_Dataset_img[np.random.choice(range(len(PSR_Dataset_img)), size=100,replace=False)]
-        PSR_subDataset_img_cv = u_st.numpy2cv(PSR_subDataset_img)
-        for idx, img_cv in enumerate(PSR_subDataset_img_cv):
-            img_cv = cv2.bilateralFilter(img_cv, 3, 20, 0)
-            img_cv = cv2.medianBlur(img_cv,9)
-            #u_idsip.show_pic(u_st.cv2numpy(img_cv))
-            img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2YCR_CB)
-            PSR_subDataset_img_cv[idx] = img_cv
-        # 计算方差获取目标背景区域
-
-        PSR_subDataset_img_var = np.var(PSR_subDataset_img_cv, axis = 0)
-
-        np.percentile(PSR_subDataset_img_var, 90)
-
         
+
+    elif mode==6:
+        # 固定阈值分割，230
+        imgs = u_st.numpy2cv(PSR_Dataset_img)
+        num, h, w, c = imgs.shape
+        masks = np.zeros((num, h,w,1), dtype=np.uint8)
+        for idx, img in enumerate(imgs):
+            mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            mask = np.where(mask>230, 0, 255)
+            mask = Morphological_processing(mask)
+            masks[idx,:,:,0] = mask
+        masks = u_st.cv2numpy(masks)
+
+
         
     if savesample: u_idsip.save_pic(u_idsip.img_square(masks[disp_sample_list, :, :, :]), '02_02_mask', filedir)
     
@@ -115,8 +119,12 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         PSR_Dataset_img_pred[idx, 0, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 0, :, :], 0)
         PSR_Dataset_img_pred[idx, 1, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 1, :, :], 0)
         PSR_Dataset_img_pred[idx, 2, :, :] = np.where(mask==255, PSR_Dataset_img[idx, 2, :, :], 0)
+        
+        
     if savesample: u_idsip.save_pic(u_idsip.img_square(PSR_Dataset_img_pred[disp_sample_list, :, :, :]), '02_03_maskminus', filedir)
-
+    
+    print('\tshapes of images:')
+    print('\t',PSR_Dataset_img.shape)
     #处理结束
     return PSR_Dataset_img_pred
 
@@ -212,29 +220,6 @@ def classifier_trained_by_img(img, region_roi, region_fg, region_bg):
     #classifier = RandomForestClassifier(n_estimators=50, criterion='gini')
 
     classifier.fit(X_dataset, Y_dataset)
-
-    '''
-    kflod = StratifiedKFold(n_splits=10, shuffle = True,random_state=999)
-    param_grid = dict(C = [1])# 网格参数
-    grid_search = GridSearchCV( svmclassifier,
-                                param_grid,
-                                scoring = 'neg_log_loss',
-                                n_jobs = -1,    #CPU全开
-                                cv = kflod,
-                                verbose=1)
-    grid_result = grid_search.fit(X_train, Y_train) #运行网格搜索
-    print("Best: %f using %s" % (grid_result.best_score_,grid_search.best_params_))
-    means = grid_result.cv_results_['mean_test_score']
-    params = grid_result.cv_results_['params']
-    for mean,param in zip(means,params):
-        print("%f  with:   %r" % (mean,param))
-    '''
-
-    #Y_pred = svmclassifier.predict(X_dataset)
-    #print(classification_report(Y_dataset, Y_pred))
-    #print('='*20)
-    #print(confusion_matrix(Y_test, Y_pred))
-    #print('='*20)
     return classifier
 
 def graylevel_down(img, fac=16):
@@ -336,8 +321,6 @@ def get_area_by_mouse(img, title=''):
     
     return (y0, y1, x0, x1), (roi_y0, roi_y1, roi_x0, roi_x1), (bg_y0, bg_y1, bg_x0, bg_x1)
 
-
-
 @fun_run_time
 def rgb2HSV(imgs):
     '''rgb转HSV'''
@@ -410,12 +393,6 @@ def baweraopen_adapt(img, intensity = 0.2, alpha = 0.001):
                     if labels[row, col]==i:
                         output[row, col]=0
     return output
-
-
-##
- 
-
- 
 
 #ycrcb椭圆肤色模型
 @fun_run_time
@@ -685,9 +662,7 @@ def get_bg_bound(img_cv):
 '''
 @fun_run_time
 def XXX(imgs, arg=[], k=5, r=6):    
-    ''' 
     # 说明
-'''
     k = arg[0]
     r = arg[1]
     u_st._check_imgs(imgs)

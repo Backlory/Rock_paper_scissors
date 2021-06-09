@@ -13,12 +13,12 @@ def fit(x_train, y_train, mode = 1):
     if mode == 1:
         #输入SVM分类
         from sklearn.svm import SVC
-        classifier = SVC(C=0.2, kernel='rbf', gamma='scale', probability=True, verbose=2)
+        classifier = SVC(C=1, kernel='rbf', gamma='scale', probability=True, verbose=0)
         classifier = classifier.fit(x_train, y_train)
     
     elif mode == 2:
         from sklearn.svm import SVR
-        classifier = SVR(kernel='rbf', verbose=2)
+        classifier = SVR(kernel='rbf', verbose=0)
         classifier = classifier.fit(x_train, y_train)
     return classifier
 
