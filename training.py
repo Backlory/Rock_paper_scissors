@@ -22,7 +22,7 @@ import model.train_strategy as m_ts
 if __name__ =='__main__':
     # 变量准备
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
-    experiment_data = 'data_origin'   #data_origin,  data_my, data_test
+    experiment_data = 'data_my'   #data_origin,  data_my, data_test
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data/'+str(experiment_data)) #
@@ -64,7 +64,7 @@ if __name__ =='__main__':
 
     #============================================================          
     # 特征提取
-    mode = 1
+    mode = 0
     PSR_Dataset_Vectors_list = m_fet.Featurextractor(   PSR_Dataset_imgs,
                                                         mode
                                                         )
@@ -93,7 +93,8 @@ if __name__ =='__main__':
         x_train = scaler.transform(x_train)
         
         #分类器训练
-        classifier = m_ts.fit(x_train, y_train, mode = 1)
+        
+        classifier = m_ts.fit(x_train, y_train, classifier = 'SVC', mode = 1)
         
         #分类器预测
         
@@ -109,7 +110,7 @@ if __name__ =='__main__':
         print(confusion_matrix(y_test, y_pred))
         print('='*20)
         
-        save_obj(PSR_Dataset_imgs, 'weights\\Dataset_imgs_'+ experiment_data +'.joblib')
+    save_obj(classifier, 'weights\\classifier.joblib')
         
         
 
