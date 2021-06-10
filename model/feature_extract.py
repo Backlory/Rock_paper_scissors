@@ -38,10 +38,10 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
     num, c, h, w = PSR_Dataset_img.shape
 
     #特征获取
-    if mode == 0:
+    if mode == 1:
         #圆形度
         PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_circularity)
-    elif mode==1:
+    elif mode==2:
         #Hu不变矩
         PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_hu_moments)
     #处理结束

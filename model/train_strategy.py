@@ -12,8 +12,6 @@ def fit_classifiers(x_train, y_train, classifier = None, mode = 1):
     '''
     classfier = {SVC, SVR, DT, RFC, RFR, NB, KNN, LR, GBDT}
     '''
-    print(colorstr('='*50, 'red'))
-    print(colorstr('Training...'))
     #分类器
     classifiers = []
     if classifier == 'SVC':
@@ -48,8 +46,8 @@ def fit_classifiers(x_train, y_train, classifier = None, mode = 1):
         classifiers.append(classifier)
     elif classifier == 'NB':
         #朴素贝叶斯多项式
-        from sklearn.naive_bayes import MultinomialNB
-        classifier = MultinomialNB(alpha=0.01)
+        from sklearn.naive_bayes import GaussianNB
+        classifier = GaussianNB()
         classifiers.append(classifier)
     elif classifier == 'KNN':
         #K最近邻分类器
@@ -65,25 +63,26 @@ def fit_classifiers(x_train, y_train, classifier = None, mode = 1):
         from sklearn.ensemble import GradientBoostingClassifier
         classifier = GradientBoostingClassifier(n_estimators=200)
         classifiers.append(classifier)
-    elif classifier == 'ALL':
+    elif classifier == 'ALL_classifier':
         #鱼 龙 混 杂 
         from sklearn.svm import SVC
         from sklearn.svm import SVR
         from sklearn.tree import DecisionTreeClassifier
         from sklearn.ensemble import RandomForestClassifier
         from sklearn.ensemble import RandomForestRegressor 
-        from sklearn.naive_bayes import MultinomialNB
+        from sklearn.naive_bayes import GaussianNB
         from sklearn.ensemble import GradientBoostingClassifier
         from sklearn.linear_model import LogisticRegression
         from sklearn.neighbors import KNeighborsClassifier
+        #
         classifiers.append( SVC(C=1, kernel='rbf', gamma='scale', probability=True, verbose=0)  )
-        classifiers.append( SVR(kernel='rbf', verbose=0)                                        )
+        #classifiers.append( SVR(kernel='rbf', verbose=0)                                        )
         classifiers.append( DecisionTreeClassifier()                                            )
         classifiers.append( RandomForestClassifier(n_estimators=100)                            )
-        classifiers.append( RandomForestRegressor(n_estimators=100)                             )
-        classifiers.append( MultinomialNB(alpha=0.01)                                           )
+        #classifiers.append( RandomForestRegressor(n_estimators=100)                             )
+        classifiers.append( GaussianNB()                                           )
         classifiers.append( KNeighborsClassifier()                                              )
-        classifiers.append( LogisticRegression(penalty='l2')                                    )
+        #classifiers.append( LogisticRegression(penalty='l2')                                    )
         classifiers.append( GradientBoostingClassifier(n_estimators=200)                        )
     
     #训练

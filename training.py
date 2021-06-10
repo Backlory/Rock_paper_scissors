@@ -7,9 +7,10 @@ from datetime import datetime
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
+from matplotlib import pyplot as plt 
 
 import utils.img_display as u_idsip
-from utils.tools import tic, toc
+from utils.tools import colorstr, tic, toc
 from weights.weightio import save_obj, load_obj
 #
 import model.preprosess as m_pp
@@ -22,7 +23,7 @@ import model.train_strategy as m_ts
 if __name__ =='__main__':
     # 变量准备
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
-    experiment_data = 'data_my'   #data_origin,  data_my, data_test
+    experiment_data = 'data_origin'   #data_origin,  data_my, data_test
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data/'+str(experiment_data)) #
@@ -64,7 +65,7 @@ if __name__ =='__main__':
 
     #============================================================          
     # 特征提取
-    mode = 0
+    mode = 2
     PSR_Dataset_Vectors_list = m_fet.Featurextractor(   PSR_Dataset_imgs,
                                                         mode
                                                         )
@@ -81,9 +82,14 @@ if __name__ =='__main__':
     from sklearn.metrics import classification_report                         
     from sklearn.metrics import confusion_matrix                         
     skf = StratifiedKFold(n_splits=10, shuffle = True,random_state=999) #交叉验证，分层抽样
-    for train_index, test_index in skf.split(X_dataset, Y_dataset):
-        print('='*50)
-        print('K-fold cross validation')
+    
+    # 模型训练
+    print(colorstr('='*50, 'red'))
+    print(colorstr('Training...'))
+    y_test_list, y_pred_list = [], []
+    for idx, (train_index, test_index) in enumerate(skf.split(X_dataset, Y_dataset)):
+        print(f'K = {idx+1} / {skf.n_splits}')
+        
         #获取数据
         x_train, y_train = X_dataset[train_index], Y_dataset[train_index]
         x_test, y_test = X_dataset[test_index], Y_dataset[test_index]
@@ -95,7 +101,7 @@ if __name__ =='__main__':
         
         #分类器训练
         
-        classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'ALL', mode = 1)
+        classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'ALL_classifier', mode = 1)
         #分类器预测
         
         #print('train accuracy:')
@@ -103,13 +109,36 @@ if __name__ =='__main__':
         #print(classification_report(y_train, y_pred, zero_division=1))
         #print(confusion_matrix(y_train, y_pred))
         
-        print('test accuracy:')
+
         x_test = scaler.transform(x_test)
-        for classifier in classifiers:
+        for idx, classifier in enumerate(classifiers):
             y_pred = classifier.predict(x_test)
-            print(confusion_matrix(y_test, y_pred))
-            print(classification_report(y_test, y_pred, zero_division=1))
-            print('='*20)
+            try:
+                y_test_list[idx] = np.concatenate((y_test_list[idx], y_test), axis = 0)
+                y_pred_list[idx] = np.concatenate((y_pred_list[idx], y_pred), axis = 0)
+            except:
+                y_test_list.append(y_test)
+                y_pred_list.append(y_pred)
+    
+    #模型评估，对第idx个分类器作出评估
+    print(colorstr('='*50, 'red'))
+    print(colorstr('Evaluating...'))
+    for idx, (y_test, y_pred) in enumerate(zip(y_test_list, y_pred_list)):
+        #分类器
+        print(f'No.{idx} : {classifiers[idx]}')
+
+        #混淆矩阵图
+        conf_mat = confusion_matrix(y_test, y_pred)
+        plt.matshow(conf_mat, cmap=plt.viridis)
+        plt.colorbar()
+        for x in range(len(conf_mat)):
+            for y in range(len(conf_mat)):
+                plt.annotate(conf_mat[x,y], xy=(x,y), horizontalalignment='center', verticalalignment='center')
+        plt.show()
+        
+        #评估报告
+        temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=True)
+        print(temp)
         
     save_obj(classifier, 'weights\\classifier.joblib')
         
