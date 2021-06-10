@@ -83,12 +83,13 @@ def fit_classifiers(x_train, y_train, classifier = None, mode = 1):
         classifiers.append( GaussianNB()                                           )
         classifiers.append( KNeighborsClassifier()                                              )
         #classifiers.append( LogisticRegression(penalty='l2')                                    )
-        classifiers.append( GradientBoostingClassifier(n_estimators=200)                        )
+        classifiers.append( GradientBoostingClassifier(n_estimators=100)                        )
     
     #训练
     if mode == 1:
         #直接fit
         for classifier in classifiers:
+            print('fitting ', classifier, '...')
             classifier = classifier.fit(x_train, y_train)
     elif mode == 2:
         pass

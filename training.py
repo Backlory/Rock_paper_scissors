@@ -3,12 +3,15 @@ import numpy as np
 import random
 import data.data_loading
 from datetime import datetime
-
+#
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import StratifiedKFold          
+from sklearn.metrics import classification_report                         
+from sklearn.metrics import confusion_matrix, cohen_kappa_score                           
 from matplotlib import pyplot as plt 
-
+#
 import utils.img_display as u_idsip
 from utils.tools import colorstr, tic, toc
 from weights.weightio import save_obj, load_obj
@@ -78,10 +81,7 @@ if __name__ =='__main__':
                                                     )
     
     # 训练集分割
-    from sklearn.model_selection import StratifiedKFold          
-    from sklearn.metrics import classification_report                         
-    from sklearn.metrics import confusion_matrix                         
-    skf = StratifiedKFold(n_splits=10, shuffle = True,random_state=999) #交叉验证，分层抽样
+    skf = StratifiedKFold(n_splits=3, shuffle = True,random_state=999) #交叉验证，分层抽样
     
     # 模型训练
     print(colorstr('='*50, 'red'))
@@ -100,10 +100,9 @@ if __name__ =='__main__':
         x_train = scaler.transform(x_train)
         
         #分类器训练
-        
-        classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'ALL_classifier', mode = 1)
+        classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'RFC', mode = 1) #ALL_classifier
+
         #分类器预测
-        
         #print('train accuracy:')
         #y_pred = classifier.predict(x_train)
         #print(classification_report(y_train, y_pred, zero_division=1))
@@ -125,26 +124,29 @@ if __name__ =='__main__':
     print(colorstr('Evaluating...'))
     for idx, (y_test, y_pred) in enumerate(zip(y_test_list, y_pred_list)):
         #分类器
-        print(f'No.{idx} : {classifiers[idx]}')
+        print('-'*20)
+        print(f'No.{idx+1} : {classifiers[idx]}')
 
         #混淆矩阵图
-        conf_mat = confusion_matrix(y_test, y_pred)
-        plt.matshow(conf_mat, cmap=plt.viridis)
-        plt.colorbar()
-        for x in range(len(conf_mat)):
-            for y in range(len(conf_mat)):
-                plt.annotate(conf_mat[x,y], xy=(x,y), horizontalalignment='center', verticalalignment='center')
-        plt.show()
+        #conf_mat = confusion_matrix(y_test, y_pred)
+        #plt.matshow(conf_mat, cmap='viridis')
+        #plt.colorbar()
+        #for x in range(len(conf_mat)):
+        #    for y in range(len(conf_mat)):
+        #        plt.annotate(conf_mat[x,y], xy=(x,y), horizontalalignment='center', verticalalignment='center')
+        #plt.show()
         
         #评估报告
-        temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=True)
+        temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=False)
         print(temp)
+        kappa = cohen_kappa_score(y_test, y_pred)
+        print(kappa)
         
-    save_obj(classifier, 'weights\\classifier.joblib')
+    # 模型文件保存
+    save_obj(classifiers, 'weights\\classifier.joblib')
         
         
 
-    # 权重文件保存
 
 
 
