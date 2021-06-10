@@ -82,7 +82,8 @@ if __name__ =='__main__':
     from sklearn.metrics import confusion_matrix                         
     skf = StratifiedKFold(n_splits=10, shuffle = True,random_state=999) #交叉验证，分层抽样
     for train_index, test_index in skf.split(X_dataset, Y_dataset):
-        
+        print('='*50)
+        print('K-fold cross validation')
         #获取数据
         x_train, y_train = X_dataset[train_index], Y_dataset[train_index]
         x_test, y_test = X_dataset[test_index], Y_dataset[test_index]
@@ -94,8 +95,7 @@ if __name__ =='__main__':
         
         #分类器训练
         
-        classifier = m_ts.fit(x_train, y_train, classifier = 'SVC', mode = 1)
-        
+        classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'ALL', mode = 1)
         #分类器预测
         
         #print('train accuracy:')
@@ -105,10 +105,11 @@ if __name__ =='__main__':
         
         print('test accuracy:')
         x_test = scaler.transform(x_test)
-        y_pred = classifier.predict(x_test)
-        print(classification_report(y_test, y_pred, zero_division=1))
-        print(confusion_matrix(y_test, y_pred))
-        print('='*20)
+        for classifier in classifiers:
+            y_pred = classifier.predict(x_test)
+            print(confusion_matrix(y_test, y_pred))
+            print(classification_report(y_test, y_pred, zero_division=1))
+            print('='*20)
         
     save_obj(classifier, 'weights\\classifier.joblib')
         
