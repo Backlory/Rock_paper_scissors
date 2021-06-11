@@ -68,7 +68,7 @@ if __name__ =='__main__':
 
     #============================================================          
     # 特征提取
-    mode = 2
+    mode = 3
     PSR_Dataset_Vectors_list = m_fet.Featurextractor(   PSR_Dataset_imgs,
                                                         mode
                                                         )
