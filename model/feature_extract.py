@@ -47,7 +47,12 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
         #Hu不变矩
         PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_hu_moments)
     elif mode==3:
-        PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_distence_detector, direct_number = 36)
+        direct_number = 36
+        CIB_masks = get_CIB_masks(direct_number)
+        PSR_Dataset_Vectors = get_Vectors(  PSR_Dataset_img,
+                                            fea_distence_detector,
+                                            direct_number = direct_number,
+                                            CIB_masks=CIB_masks)
 
     #处理结束
     return PSR_Dataset_Vectors
@@ -108,16 +113,32 @@ def fea_hu_moments(img_cv):
     humoments = -np.log10(np.abs(humoments))
     return humoments
 
-# 质心提取
+
+#获取同心等距放射线模板组(Concentric Isometric Beam),direct_number个，每个为601*601
+def get_CIB_masks(direct_number):
+    CIB_masks = []
+    for theta in range(direct_number):
+        CIB_mask = np.zeros((601,601), dtype=np.uint8)
+        theta = theta / direct_number * 2 * math.pi
+        r = 600
+        tempx = int(r * math.cos(theta)) + 300
+        tempy = int(r * math.sin(theta)) + 300
+        ptEnd = (tempx, tempy)
+        CIB_mask = cv2.line(CIB_mask, (300, 300), ptEnd, 255, thickness=1, lineType=8)
+        CIB_masks.append(CIB_mask)  #[100:501, 100:501]
+    return CIB_masks
+
 # 欧氏距离探测算子
-def fea_distence_detector(img_cv, direct_number = 36):
+def fea_distence_detector(img_cv, direct_number = 36, CIB_masks = None):
     '''
     计算质心。
-    \n输入cv图片，RGB
+    \n输入三通道cv图片，RGB
     '''
     #
-    img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
+    img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)       #3d-->2d
     img_cv[img_cv>0]=255
+    ori_h, ori_w = img_cv.shape
+    
     #获取质心
     m = cv2.moments(img_cv)   #支持自动转换，非零像素默认为1，计算图像的三阶以内的矩
     cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])
@@ -125,9 +146,9 @@ def fea_distence_detector(img_cv, direct_number = 36):
     #计算最大面积区域作为目标区域
     contours, hier = cv2.findContours(img_cv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contour = contours[np.argmax([cv2.contourArea(cnt) for cnt in contours])]   #取得二维最大连通域
-    x_leftop, y_leftop, w, h = cv2.boundingRect(contour)                         #计算区域最小正矩形（左上角点坐标，宽，高）
-    s_h = h/10  #挪动的次数为10，计算挪动步长
-    s_w = w/10
+    x_leftop, y_leftop, area_w, area_h = cv2.boundingRect(contour)                         #计算区域最小正矩形（左上角点坐标，宽，高）
+    s_h = area_h/10  #挪动的次数为10，计算挪动步长
+    s_w = area_w/10
     
     #在目标区域框中遍历81个位置，获取特征向量(1, direct_number)
     Vectors = []
@@ -137,42 +158,46 @@ def fea_distence_detector(img_cv, direct_number = 36):
             w_ = int(cx + s_w*(i-4))
             if img_cv[h_, w_] != 0: #仅在区域内点处计算
 
-                # 获取各个方向值。
+                # 利用获取各个方向值。
                 Vector = np.zeros((direct_number))
                 for idx, theta in enumerate(range(direct_number)):  
-                    #获得目标方向的终点坐标
-                    theta = theta / direct_number * 2 * math.pi
-                    r = 300
-                    tempx = int(r * math.cos(theta)) + w_
-                    tempy = int(r * math.sin(theta)) + h_
-                    #划线，作差得到，得到目标方向的相应
-                    img_cv_lined = img_cv.copy()
-                    img_cv_lined = cv2.line(img_cv_lined, (w_, h_), (tempx, tempy), 0, thickness=1, lineType=8)
-                    lined = cv2.subtract(img_cv, img_cv_lined)        #只有一条线的图片
+                    
+                    CIB_mask = CIB_masks[idx] #以300,300为中心，变为以
+                    CIB_mask = CIB_mask[300-h_:300-h_+ori_h, 300-w_:300-w_+ori_w]
+                    lined = CIB_mask * img_cv
+                    
+                    ##获得目标方向的终点坐标
+                    #theta = theta / direct_number * 2 * math.pi
+                    #r = 300
+                    #tempx = int(r * math.cos(theta)) + w_
+                    #tempy = int(r * math.sin(theta)) + h_
+                    ##划线，作差得到，得到目标方向的相应
+                    #img_cv_lined = img_cv.copy()
+                    #img_cv_lined = cv2.line(img_cv_lined, (w_, h_), (tempx, tempy), 0, thickness=1, lineType=8)
+                    #lined = cv2.subtract(img_cv, img_cv_lined)        #只有一条线的图片
+
                     #加和得到特征的值
-                    Vector[idx] = np.sum(lined/255.0)   #归一化，得到百分比值
+                    Vector[idx] = np.sum(lined/255.0)   #
                 #print(Vector)
                 #处理特征向量
-                Vector_1 = Vector - Vector[[x-1 for x in range(len(Vector))]] #循环一阶后向差分
-                Vector_2 = Vector   + Vector[[x-1 for x in range(len(Vector))]] \
-                                    + Vector[[x-2 for x in range(len(Vector))]] \
-                                    + Vector[[x-3 for x in range(len(Vector))]] \
-                                    + Vector[[x-4 for x in range(len(Vector))]] #移动累加，仅用于获取起点
-                idx = np.argmax(Vector_2)
-                Vector = Vector_1[[x-idx for x in range(len(Vector))]]    #令idx号为0号，重新计算起点
-                Vector = (Vector-np.min(Vector))/(np.max(Vector) - np.min(Vector)) #归一化
+                
                 Vectors.append(Vector)
+    
+    #对特征处理，以矩阵形式
+    Vectors = np.array(Vectors) #n*36
+    Vectors_diff = Vectors - Vectors[:, [x-1 for x in range(direct_number)]] #循环一阶后向差分
 
+    Vectors_2 = Vectors + Vectors[:,[x-1 for x in range(direct_number)]] \
+                        + Vectors[:,[x-2 for x in range(direct_number)]] \
+                        + Vectors[:,[x-3 for x in range(direct_number)]] \
+                        + Vectors[:,[x-4 for x in range(direct_number)]] #移动累加，仅用于获取起点
+    idxs = np.argmax(Vectors_2, axis=1)
+    for i, idx in enumerate(idxs):
+        temp = Vectors[i]
+        temp = temp[[x-idx for x in range(direct_number)]]  #转顺序
+        temp = (temp-np.min(temp)) / (np.max(temp) - np.min(temp))  #归一化
+        Vectors[i] = temp
 
-    #获取同心等距放射线模板(Concentric Isometric Beam),401*401
-    #for idx, theta in enumerate(range(direct_number)):  
-    #    #在原图划线=0，两图片相减，得到该角度的线
-    #    theta = theta / direct_number * 2 * math.pi
-    #    r = 300
-    #    tempx = int(r * math.cos(theta)) + w_
-    #    tempy = int(r * math.sin(theta)) + h_
-    #    img_cv = cv2.line(img_cv, (w_, h_), (tempx, tempy), 0, thickness=1, lineType=8)
-    #u_idsip.show_pic(img_cv)
     #for theta in range(direct_number):
     #    theta = theta / direct_number * 2 * math.pi
     #    r = 300
