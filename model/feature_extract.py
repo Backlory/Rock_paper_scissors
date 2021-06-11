@@ -47,7 +47,7 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
         #Hu不变矩
         PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_hu_moments)
     elif mode==3:
-        PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_distence_detector, 36)
+        PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_distence_detector, direct_number = 36)
 
     #处理结束
     return PSR_Dataset_Vectors
@@ -123,12 +123,9 @@ def fea_distence_detector(img_cv, direct_number = 36):
     cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])
 
     #计算最大面积区域作为目标区域
-    image, contours, hier = cv2.findContours(img_cv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hier = cv2.findContours(img_cv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contour = contours[np.argmax([cv2.contourArea(cnt) for cnt in contours])]   #取得二维最大连通域
-    rect = cv2.minAreaRect(contour)                                             #计算区域最小矩形
-    box_ = cv2.boxPoints(rect)                                                  #获取坐标
-    h = abs(box_[3, 1] - box_[1, 1])
-    w = abs(box_[3, 0] - box_[1, 0])
+    x_leftop, y_leftop, w, h = cv2.boundingRect(contour)                         #计算区域最小正矩形（左上角点坐标，宽，高）
     s_h = h/10  #挪动的次数为10，计算挪动步长
     s_w = w/10
     
@@ -139,27 +136,43 @@ def fea_distence_detector(img_cv, direct_number = 36):
             h_ = int(cy + s_h*(i-4))
             w_ = int(cx + s_w*(i-4))
             if img_cv[h_, w_] != 0: #仅在区域内点处计算
-                
-                Vector = np.zeros((direct_number))
+
                 # 获取各个方向值。
+                Vector = np.zeros((direct_number))
                 for idx, theta in enumerate(range(direct_number)):  
-                    #在原图划线=0，两图片相减，得到该角度的线
+                    #获得目标方向的终点坐标
                     theta = theta / direct_number * 2 * math.pi
                     r = 300
-                    tempx = int(r * math.cos(theta)) + 300
-                    tempy = int(r * math.sin(theta)) + 300
-                    
-                    ptEnd = 
-                    
-                    img_cv_lined = cv2.line(CIB_mask, (300, 300), ptEnd, 0, thickness=1, lineType=8)
-                    line = img_cv - img_cv_lined        #只有一条线的图片
-                    Vector[idx] = np.sum(line)
-                
+                    tempx = int(r * math.cos(theta)) + w_
+                    tempy = int(r * math.sin(theta)) + h_
+                    #划线，作差得到，得到目标方向的相应
+                    img_cv_lined = img_cv.copy()
+                    img_cv_lined = cv2.line(img_cv_lined, (w_, h_), (tempx, tempy), 0, thickness=1, lineType=8)
+                    lined = cv2.subtract(img_cv, img_cv_lined)        #只有一条线的图片
+                    #加和得到特征的值
+                    Vector[idx] = np.sum(lined/255.0)   #归一化，得到百分比值
+                #print(Vector)
                 #处理特征向量
+                Vector_1 = Vector - Vector[[x-1 for x in range(len(Vector))]] #循环一阶后向差分
+                Vector_2 = Vector   + Vector[[x-1 for x in range(len(Vector))]] \
+                                    + Vector[[x-2 for x in range(len(Vector))]] \
+                                    + Vector[[x-3 for x in range(len(Vector))]] \
+                                    + Vector[[x-4 for x in range(len(Vector))]] #移动累加，仅用于获取起点
+                idx = np.argmax(Vector_2)
+                Vector = Vector_1[[x-idx for x in range(len(Vector))]]    #令idx号为0号，重新计算起点
+                Vector = (Vector-np.min(Vector))/(np.max(Vector) - np.min(Vector)) #归一化
                 Vectors.append(Vector)
 
 
     #获取同心等距放射线模板(Concentric Isometric Beam),401*401
+    #for idx, theta in enumerate(range(direct_number)):  
+    #    #在原图划线=0，两图片相减，得到该角度的线
+    #    theta = theta / direct_number * 2 * math.pi
+    #    r = 300
+    #    tempx = int(r * math.cos(theta)) + w_
+    #    tempy = int(r * math.sin(theta)) + h_
+    #    img_cv = cv2.line(img_cv, (w_, h_), (tempx, tempy), 0, thickness=1, lineType=8)
+    #u_idsip.show_pic(img_cv)
     #for theta in range(direct_number):
     #    theta = theta / direct_number * 2 * math.pi
     #    r = 300
