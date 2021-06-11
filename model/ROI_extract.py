@@ -63,11 +63,12 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         masks2 = canny_expend_mask(PSR_Dataset_img_64)
         masks3 = threshold_OTSU_mask(PSR_Dataset_img_64)
         masks4 = threshold_bg_mask(PSR_Dataset_img_64, 0.2)
+        masks7 = slic_masks(PSR_Dataset_img_64)
         #
         #masks_muti = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
         #masks_muti = cv2.addWeighted(masks_muti,2/3,masks3,1/3,0)
         #masks_muti = cv2.addWeighted(masks_muti,3/4,masks4,1/4,0)
-        masks_muti = masks1*0.4 + masks2*0.25 + masks3*0.25 + masks4*0.1
+        masks_muti = masks1*0.25 + masks2*0.2 + masks3*0.2 + masks4*0.1 + masks7*0.25
         masks_muti = masks_muti.astype(np.uint8)
         #
         masks = np.where(masks_muti>=255*(0.2), 255, 0) #置信度阈值0.2
@@ -87,6 +88,7 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks2[disp_sample_list, :, :, :]), '02_01_masks2', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks3[disp_sample_list, :, :, :]), '02_01_masks3', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks4[disp_sample_list, :, :, :]), '02_01_masks4', filedir)
+        if savesample: u_idsip.save_pic(u_idsip.img_square(masks7[disp_sample_list, :, :, :]), '02_01_masks7', filedir)
         if savesample: u_idsip.save_pic(u_idsip.img_square(masks_muti[disp_sample_list, :, :, :]), '02_01_mutil_masks', filedir)
 
         #u_idsip.show_pic(masks[0,:,:,:])
@@ -109,6 +111,8 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
             mask = Morphological_processing(mask)
             masks[idx,:,:,0] = mask
         masks = u_st.cv2numpy(masks)
+    elif mode ==7:
+        masks = slic_masks(PSR_Dataset_img)
 
 
         
@@ -128,7 +132,42 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     #处理结束
     return PSR_Dataset_img_pred
 
-
+def slic_masks(imgs):
+    ''' 
+    GMM聚类
+    '''
+    u_st._check_imgs(imgs) #[num, c, h, w]
+    imgs = u_st.numpy2cv(imgs)
+    #
+    from sklearn.mixture import GaussianMixture as GMM
+    num, h, w, c = imgs.shape
+    #
+    masks = np.zeros((num, h,w,1), dtype=np.uint8)
+    for idx, img in enumerate(imgs):
+        #
+        temp = img
+        temp.resize((h*w, c))
+        gmm = GMM(n_components=2).fit(temp)
+        dst = gmm.predict(temp)*255
+        dst.resize((h, w))
+        # 图像最外围检测
+        temp  = np.mean(dst[0, :])/255.0
+        temp += np.mean(dst[-1,:])/255.0
+        temp += np.mean(dst[:, 0])/255.0
+        temp += np.mean(dst[:,-1])/255.0
+        temp /= 4
+        if temp > 0.5:
+            dst = 255- dst
+        dst = dst.astype(np.uint8)
+        dst = cv2.erode(dst, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5)))
+        dst = baweraopen_adapt(dst, 0.2, 0.001)
+        dst = cv2.dilate(dst, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3)))
+            
+        masks[idx,:,:,0] = dst
+    #
+    masks = u_st.cv2numpy(masks)
+    u_st._check_imgs(masks)
+    return masks
 
 #@fun_run_time
 def classifier_mask(imgs, model):
@@ -624,6 +663,10 @@ def threshold_bg_mask(imgs, alpha=0.2):
         
         dst = np.where(v < v_th*(1-alpha), 255, 0)
         dst = np.where(v > v_th*(1+alpha), 255, dst)
+        dst = dst.astype(np.uint8)
+        dst = cv2.erode(dst, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5)))
+        dst = baweraopen_adapt(dst, 0.2, 0.001)
+        dst = cv2.dilate(dst, kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3)))
 
         # 图像最外围检测
         temp  = np.mean(dst[0, :])/255.0

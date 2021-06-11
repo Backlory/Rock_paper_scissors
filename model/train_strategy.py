@@ -10,7 +10,7 @@ from utils.tools import fun_run_time
 @fun_run_time
 def fit_classifiers(x_train, y_train, classifier = None, mode = 1):
     '''
-    classfier = {SVC, SVR, DT, RFC, RFR, NB, KNN, LR, GBDT}
+    classfier = {SVC, SVR, DT, RFC, RFR, NB, KNN, LR, GBDT, ALL_classifier}
     '''
     #分类器
     classifiers = []

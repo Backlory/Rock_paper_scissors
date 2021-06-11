@@ -14,6 +14,7 @@ if __name__=="__main__":
         #
         ret, frame = cap.read()
         framesave = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+        framesave = cv2.resize(framesave, (256, 256))
         framesave = cv2numpy(framesave)
         #
         save_pic(framesave, 'shitou_'+str(i), 'data/data_bg/')

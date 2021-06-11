@@ -5,7 +5,7 @@ import os,sys
 
 from .structure_trans import gray2ggg
 from .tools import fun_run_time
-
+from .structure_trans import cv2numpy
 
 def prepare_path(name_dir):
     '''
@@ -60,7 +60,11 @@ def show_pic(data,windowname = 'default',showtype='freeze'):
     except:
         data = data[np.newaxis, :, :]
 
-    assert (data.shape[0] ==1 or data.shape[0] == 3)    #通道数，高，宽
+    try:
+        assert (data.shape[0] ==1 or data.shape[0] == 3)    #通道数，高，宽
+    except:
+        assert (data.shape[2] ==1 or data.shape[2] == 3)    #高，宽，通道数
+        data = cv2numpy(data)
     if np.max(data)<=1: data=data*255.
     data=np.uint8(data)
     #

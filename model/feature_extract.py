@@ -28,9 +28,9 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
     '''
     输入：被剪除mask部分的4d图片集，(num, c, h, w),RGB\n
     mode\n
-    1=圆形度\n
-    2=Hu不变矩\n
-    3=欧氏距离探测算子\n
+    Round =圆形度\n
+    Hu =Hu不变矩\n
+    distence_detector =欧氏距离探测算子\n
     \n
     输出：特征列表，列表内每个元素都是矩阵。\n
     '''
@@ -40,13 +40,24 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
     num, c, h, w = PSR_Dataset_img.shape
 
     #特征获取
-    if mode == 1:
+    if mode == 'Round':
         #圆形度
         PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_circularity)
-    elif mode==2:
+    elif mode=='Hu':
         #Hu不变矩
         PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_hu_moments)
-    elif mode==3:
+    elif mode == 'Round_Hu':
+        temp1 = get_Vectors(PSR_Dataset_img, fea_circularity)
+        temp1 = np.array(temp1)
+        temp1 = temp1[:, np.newaxis]
+        #
+        temp2 = get_Vectors(PSR_Dataset_img, fea_hu_moments)
+        temp2 = np.array(temp2)
+        #
+        PSR_Dataset_Vectors = np.concatenate((temp1, temp2), axis=1)
+        assert(PSR_Dataset_Vectors.shape[1]==8)
+        PSR_Dataset_Vectors = PSR_Dataset_Vectors.tolist()
+    elif mode=='distence_detector':
         direct_number = 36
         CIB_masks = get_CIB_masks(direct_number)
         PSR_Dataset_Vectors = get_Vectors(  PSR_Dataset_img,
@@ -55,6 +66,7 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
                                             CIB_masks=CIB_masks)
 
     #处理结束
+
     return PSR_Dataset_Vectors
 
 
@@ -105,7 +117,7 @@ def fea_hu_moments(img_cv):
     '''
     #
     img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
-    img_cv[img_cv>0]=255
+    #img_cv[img_cv>0]=255
     #
     moments = cv2.moments(img_cv)   #支持自动转换，非零像素默认为1，计算图像的三阶以内的矩
     humoments = cv2.HuMoments(moments) #计算Hu不变矩
@@ -138,7 +150,7 @@ def fea_distence_detector(img_cv, direct_number = 36, CIB_masks = None):
     img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)       #3d-->2d
     img_cv[img_cv>0]=255
     ori_h, ori_w = img_cv.shape
-    
+
     #获取质心
     m = cv2.moments(img_cv)   #支持自动转换，非零像素默认为1，计算图像的三阶以内的矩
     cx, cy = int(m["m10"] / m["m00"]), int(m["m01"] / m["m00"])

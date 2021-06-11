@@ -35,7 +35,7 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
         h, w, _ = img.shape
 
         if h != h_std or w != w_std:
-            img = cv2.resize(img, (h_std,w_std))
+            img = cv2.resize(img, (w_std, h_std))
         
         img = u_st.cv2numpy(img)    #channal, height, width，RGB
         PSR_Dataset_img.append(img)
