@@ -132,6 +132,7 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     #处理结束
     return PSR_Dataset_img_pred
 
+@fun_run_time
 def slic_masks(imgs):
     ''' 
     GMM聚类

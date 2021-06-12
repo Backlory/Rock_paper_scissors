@@ -1,6 +1,8 @@
 # 训练有关函数
 import numpy as np
 import random
+
+from numpy.lib import utils
 import data.data_loading
 from datetime import datetime
 #
@@ -21,12 +23,15 @@ import model.ROI_extract as m_Re
 import model.feature_extract as m_fet
 import model.feature_encode as m_fed
 import model.train_strategy as m_ts
+from utils.img_display import prepare_path, save_pic, img_square
 
 
 if __name__ =='__main__':
     # 变量准备
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
-    experiment_data = 'data_my'   #data_origin,  data_my, data_test, data_my_add
+    experiment_data = 'data_origin'   #data_origin,  data_my, data_test, data_my_add
+    experiment_dir = 'experiment/'+ timenow +'/'
+    prepare_path(experiment_dir)
     
     # 数据加载
     PSR_Dataset = data.data_loading.PSR_Dataset('data/'+str(experiment_data)) #
@@ -71,20 +76,25 @@ if __name__ =='__main__':
 
     #============================================================          
     # 特征提取
-    mode = 'Round_Hu'           #Round_Hu, Round, Hu, distence_detector
-    PSR_Dataset_Vectors_list = m_fet.Featurextractor(   PSR_Dataset_imgs,
-                                                        mode
-                                                        )
-    
+    mode_fet = 'Hu'           #Round_Hu, Round, Hu, distence_detector
+    try:
+        PSR_Dataset_Vectors_list = load_obj('data\\Dataset_vectors_'+mode_fet+'_'+ experiment_data +'.joblib')
+    except:
+        save_pic(img_square(PSR_Dataset_imgs[disp_sample_list, :, :, :]), 'dataset', experiment_dir)
+        PSR_Dataset_Vectors_list = m_fet.Featurextractor(   PSR_Dataset_imgs,
+                                                            mode_fet
+                                                            )
+        save_obj(PSR_Dataset_Vectors_list, 'data\\Dataset_vectors_'+mode_fet+'_'+ experiment_data +'.joblib')
     # 特征编码
-    mode = 'normal'          #bagofword, normal
+    mode_encode = 'normal'          #bagofword, normal
     X_dataset,  Y_dataset= m_fed.Featurencoder(     PSR_Dataset_Vectors_list,
                                                     PSR_Dataset_labels,
-                                                    mode
+                                                    mode_encode
                                                     )
     
     # 训练集分割
-    skf = StratifiedKFold(n_splits=10, shuffle = True,random_state=999) #交叉验证，分层抽样
+    K_fold_size = 3
+    skf = StratifiedKFold(n_splits=K_fold_size, shuffle = True,random_state=999) #交叉验证，分层抽样
     
     # 模型训练
     print(colorstr('='*50, 'red'))
@@ -125,13 +135,20 @@ if __name__ =='__main__':
     #模型评估，对第idx个分类器作出评估
     print(colorstr('='*50, 'red'))
     print(colorstr('Evaluating...'))
+    classifier_names = []
+    conf_mats = []
+    classification_reports = []
+    classification_reports_dict = []
+    kappas = []
     for idx, (y_test, y_pred) in enumerate(zip(y_test_list, y_pred_list)):
         #分类器
         print('-'*20)
         print(f'No.{idx+1} : {classifiers[idx]}')
-
+        classifier_names.append(str(classifiers[idx]))
+        
         #混淆矩阵图
         conf_mat = confusion_matrix(y_test, y_pred)
+        conf_mats.append(conf_mat)
         print(conf_mat)
         #plt.matshow(conf_mat, cmap='viridis')
         #plt.colorbar()
@@ -143,9 +160,45 @@ if __name__ =='__main__':
         #评估报告
         temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=False)
         print(temp)
+        classification_reports.append(temp)
+        temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=True)
+        classification_reports_dict.append(temp)
+
+
         kappa = cohen_kappa_score(y_test, y_pred)
+        kappas.append(kappa)
         print(kappa)
-        
+    
+    #评估报告打印
+    performence_report = ''
+    performence_report += '\n' + str(timenow)
+    performence_report += '\n' + f'feasure extract mode = {mode_fet}, encode mode = {mode_encode}, K_fold_size={K_fold_size}.'
+    performence_report += '\n'
+    performence_report += '\n' + '='*50
+    performence_report += '\n'
+    #
+    performence_report += '\n' + f' {classifier_names}:'
+    performence_report += '\n accuracy, '   + str( np.round([x['accuracy'] for x in classification_reports_dict], 4))
+    performence_report += '\n precision, '  + str( np.round([x['weighted avg']['precision'] for x in classification_reports_dict], 4))
+    performence_report += '\n recall, '     + str( np.round([x['weighted avg']['recall'] for x in classification_reports_dict], 4))
+    performence_report += '\n f1-score, '   + str( np.round([x['weighted avg']['f1-score'] for x in classification_reports_dict], 4))
+    performence_report += '\n kappas, '     + str(np.round(kappas, 4))
+    performence_report = performence_report.replace('[','')
+    performence_report = performence_report.replace(']','')
+    performence_report += '\n'
+    performence_report += '\n' + '='*50
+    performence_report += '\n'
+    for i in range(len(classifier_names)):
+        performence_report += '\n' + '-'*20
+        performence_report += '\n' + f' {classifier_names[i]}'
+        performence_report+='\n'+ f' {conf_mats[i]}'
+        performence_report+='\n'+ f' {classification_reports[i]}'
+        performence_report+='\n'+ f' kappas = {kappas[i]}'
+    #
+    with open(experiment_dir+'performence.txt', 'w', encoding='utf-8') as f:
+        f.write(performence_report)
+        f.close()
+
     # 模型文件保存
     save_obj(classifiers, 'weights\\classifier.joblib')
         

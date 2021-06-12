@@ -23,5 +23,8 @@
 *.pyc
 *.model
 *.joblib
+*.xlsx
+*.txt
+*.opju
 
 test.py
