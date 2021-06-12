@@ -85,119 +85,124 @@ if __name__ =='__main__':
                                                             mode_fet
                                                             )
         save_obj(PSR_Dataset_Vectors_list, 'data\\Dataset_vectors_'+mode_fet+'_'+ experiment_data +'.joblib')
+    
     # 特征编码
     mode_encode = 'bagofword'          #bagofword, normal
-    X_dataset,  Y_dataset= m_fed.Featurencoder(     PSR_Dataset_Vectors_list,
-                                                    PSR_Dataset_labels,
-                                                    mode_encode
-                                                    )
+    try:
+        X_dataset,  Y_dataset = load_obj('data\\Dataset_encode_'+mode_encode+'_'+ experiment_data +'.joblib')
+    except:
+        X_dataset,  Y_dataset= m_fed.Featurencoder(     PSR_Dataset_Vectors_list,
+                                                        PSR_Dataset_labels,
+                                                        mode_encode
+                                                        )
+        save_obj((X_dataset,  Y_dataset), 'data\\Dataset_encode_'+mode_encode+'_'+ experiment_data +'.joblib')
     
     # 训练集分割
-    K_fold_size = 2
-    skf = StratifiedKFold(n_splits=K_fold_size, shuffle = True,random_state=999) #交叉验证，分层抽样
-    
-    # 模型训练
-    print(colorstr('='*50, 'red'))
-    print(colorstr('Training...'))
-    y_test_list, y_pred_list = [], []
-    for idx, (train_index, test_index) in enumerate(skf.split(X_dataset, Y_dataset)):
-        print(f'K = {idx+1} / {skf.n_splits}')
+    for K_fold_size in [3]:
+        skf = StratifiedKFold(n_splits=K_fold_size, shuffle = True,random_state=999) #交叉验证，分层抽样
         
-        #获取数据
-        x_train, y_train = X_dataset[train_index], Y_dataset[train_index]
-        x_test, y_test = X_dataset[test_index], Y_dataset[test_index]
-        
-        #处理标准化
-        scaler = StandardScaler().fit(x_train)                     #标准化
-        #scaler = MinMaxScaler().fit(x_train)                       #归一化
-        x_train = scaler.transform(x_train)
-        
-        #分类器训练
-        classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'ALL_classifier', mode = 1) #ALL_classifier
+        # 模型训练
+        print(colorstr('='*50, 'red'))
+        print(colorstr('Training...'))
+        y_test_list, y_pred_list = [], []
+        for idx, (train_index, test_index) in enumerate(skf.split(X_dataset, Y_dataset)):
+            print(f'K = {idx+1} / {skf.n_splits}')
+            
+            #获取数据
+            x_train, y_train = X_dataset[train_index], Y_dataset[train_index]
+            x_test, y_test = X_dataset[test_index], Y_dataset[test_index]
+            
+            #处理标准化
+            scaler = StandardScaler().fit(x_train)                     #标准化
+            #scaler = MinMaxScaler().fit(x_train)                       #归一化
+            x_train = scaler.transform(x_train)
+            
+            #分类器训练
+            classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'ALL_classifier', mode = 1) #ALL_classifier
 
-        #分类器预测
-        #print('train accuracy:')
-        #y_pred = classifier.predict(x_train)
-        #print(classification_report(y_train, y_pred, zero_division=1))
-        #print(confusion_matrix(y_train, y_pred))
-        
+            #分类器预测
+            #print('train accuracy:')
+            #y_pred = classifier.predict(x_train)
+            #print(classification_report(y_train, y_pred, zero_division=1))
+            #print(confusion_matrix(y_train, y_pred))
+            
 
-        x_test = scaler.transform(x_test)
-        for idx, classifier in enumerate(classifiers):
-            y_pred = classifier.predict(x_test)
-            try:
-                y_test_list[idx] = np.concatenate((y_test_list[idx], y_test), axis = 0)
-                y_pred_list[idx] = np.concatenate((y_pred_list[idx], y_pred), axis = 0)
-            except:
-                y_test_list.append(y_test)
-                y_pred_list.append(y_pred)
-    
-    #模型评估，对第idx个分类器作出评估
-    print(colorstr('='*50, 'red'))
-    print(colorstr('Evaluating...'))
-    classifier_names = []
-    conf_mats = []
-    classification_reports = []
-    classification_reports_dict = []
-    kappas = []
-    for idx, (y_test, y_pred) in enumerate(zip(y_test_list, y_pred_list)):
-        #分类器
-        print('-'*20)
-        print(f'No.{idx+1} : {classifiers[idx]}')
-        classifier_names.append(str(classifiers[idx]))
+            x_test = scaler.transform(x_test)
+            for idx, classifier in enumerate(classifiers):
+                y_pred = classifier.predict(x_test)
+                try:
+                    y_test_list[idx] = np.concatenate((y_test_list[idx], y_test), axis = 0)
+                    y_pred_list[idx] = np.concatenate((y_pred_list[idx], y_pred), axis = 0)
+                except:
+                    y_test_list.append(y_test)
+                    y_pred_list.append(y_pred)
         
-        #混淆矩阵图
-        conf_mat = confusion_matrix(y_test, y_pred)
-        conf_mats.append(conf_mat)
-        print(conf_mat)
-        #plt.matshow(conf_mat, cmap='viridis')
-        #plt.colorbar()
-        #for x in range(len(conf_mat)):
-        #    for y in range(len(conf_mat)):
-        #        plt.annotate(conf_mat[x,y], xy=(x,y), horizontalalignment='center', verticalalignment='center')
-        #plt.show()
-        
-        #评估报告
-        temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=False)
-        print(temp)
-        classification_reports.append(temp)
-        temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=True)
-        classification_reports_dict.append(temp)
+        #模型评估，对第idx个分类器作出评估
+        print(colorstr('='*50, 'red'))
+        print(colorstr('Evaluating...'))
+        classifier_names = []
+        conf_mats = []
+        classification_reports = []
+        classification_reports_dict = []
+        kappas = []
+        for idx, (y_test, y_pred) in enumerate(zip(y_test_list, y_pred_list)):
+            #分类器
+            print('-'*20)
+            print(f'No.{idx+1} : {classifiers[idx]}')
+            classifier_names.append(str(classifiers[idx]))
+            
+            #混淆矩阵图
+            conf_mat = confusion_matrix(y_test, y_pred)
+            conf_mats.append(conf_mat)
+            print(conf_mat)
+            #plt.matshow(conf_mat, cmap='viridis')
+            #plt.colorbar()
+            #for x in range(len(conf_mat)):
+            #    for y in range(len(conf_mat)):
+            #        plt.annotate(conf_mat[x,y], xy=(x,y), horizontalalignment='center', verticalalignment='center')
+            #plt.show()
+            
+            #评估报告
+            temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=False)
+            print(temp)
+            classification_reports.append(temp)
+            temp = classification_report(y_test, y_pred, zero_division=1, digits=4, output_dict=True)
+            classification_reports_dict.append(temp)
 
 
-        kappa = cohen_kappa_score(y_test, y_pred)
-        kappas.append(kappa)
-        print(kappa)
-    
-    #评估报告打印
-    performence_report = ''
-    performence_report += '\n' + str(timenow)
-    performence_report += '\n' + f'feasure extract mode = {mode_fet}, encode mode = {mode_encode}, K_fold_size={K_fold_size}.'
-    performence_report += '\n'
-    performence_report += '\n' + '='*50
-    performence_report += '\n'
-    #
-    performence_report += '\n' + f' {classifier_names}:'
-    performence_report += '\n accuracy, '   + str( np.round([x['accuracy'] for x in classification_reports_dict], 4))
-    performence_report += '\n precision, '  + str( np.round([x['weighted avg']['precision'] for x in classification_reports_dict], 4))
-    performence_report += '\n recall, '     + str( np.round([x['weighted avg']['recall'] for x in classification_reports_dict], 4))
-    performence_report += '\n f1-score, '   + str( np.round([x['weighted avg']['f1-score'] for x in classification_reports_dict], 4))
-    performence_report += '\n kappas, '     + str(np.round(kappas, 4))
-    performence_report = performence_report.replace('[','')
-    performence_report = performence_report.replace(']','')
-    performence_report += '\n'
-    performence_report += '\n' + '='*50
-    performence_report += '\n'
-    for i in range(len(classifier_names)):
-        performence_report += '\n' + '-'*20
-        performence_report += '\n' + f' {classifier_names[i]}'
-        performence_report+='\n'+ f' {conf_mats[i]}'
-        performence_report+='\n'+ f' {classification_reports[i]}'
-        performence_report+='\n'+ f' kappas = {kappas[i]}'
-    #
-    with open(experiment_dir+'performence.txt', 'w', encoding='utf-8') as f:
-        f.write(performence_report)
-        f.close()
+            kappa = cohen_kappa_score(y_test, y_pred)
+            kappas.append(kappa)
+            print(kappa)
+        
+        #评估报告打印
+        performence_report = ''
+        performence_report += '\n' + str(timenow)
+        performence_report += '\n' + f'feasure extract mode = {mode_fet}, encode mode = {mode_encode}, K_fold_size={K_fold_size}.'
+        performence_report += '\n'
+        performence_report += '\n' + '='*50
+        performence_report += '\n'
+        #
+        performence_report += '\n' + f' {classifier_names}:'
+        performence_report += '\n accuracy, '   + str( np.round([x['accuracy'] for x in classification_reports_dict], 4))
+        performence_report += '\n precision, '  + str( np.round([x['weighted avg']['precision'] for x in classification_reports_dict], 4))
+        performence_report += '\n recall, '     + str( np.round([x['weighted avg']['recall'] for x in classification_reports_dict], 4))
+        performence_report += '\n f1-score, '   + str( np.round([x['weighted avg']['f1-score'] for x in classification_reports_dict], 4))
+        performence_report += '\n kappas, '     + str(np.round(kappas, 4))
+        performence_report = performence_report.replace('[','')
+        performence_report = performence_report.replace(']','')
+        performence_report += '\n'
+        performence_report += '\n' + '='*50
+        performence_report += '\n'
+        for i in range(len(classifier_names)):
+            performence_report += '\n' + '-'*20
+            performence_report += '\n' + f' {classifier_names[i]}'
+            performence_report+='\n'+ f' {conf_mats[i]}'
+            performence_report+='\n'+ f' {classification_reports[i]}'
+            performence_report+='\n'+ f' kappas = {kappas[i]}'
+        #
+        with open(experiment_dir+str(K_fold_size)+'_performence.txt', 'w', encoding='utf-8') as f:
+            f.write(performence_report)
+            f.close()
 
     # 模型文件保存
     save_obj(classifiers, 'weights\\classifier.joblib')
