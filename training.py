@@ -76,7 +76,7 @@ if __name__ =='__main__':
 
     #============================================================          
     # 特征提取
-    mode_fet = 'Hu'           #Round_Hu, Round, Hu, distence_detector
+    mode_fet = 'distence_detector'           #Round_Hu, Round, Hu, distence_detector
     try:
         PSR_Dataset_Vectors_list = load_obj('data\\Dataset_vectors_'+mode_fet+'_'+ experiment_data +'.joblib')
     except:
@@ -86,14 +86,14 @@ if __name__ =='__main__':
                                                             )
         save_obj(PSR_Dataset_Vectors_list, 'data\\Dataset_vectors_'+mode_fet+'_'+ experiment_data +'.joblib')
     # 特征编码
-    mode_encode = 'normal'          #bagofword, normal
+    mode_encode = 'bagofword'          #bagofword, normal
     X_dataset,  Y_dataset= m_fed.Featurencoder(     PSR_Dataset_Vectors_list,
                                                     PSR_Dataset_labels,
                                                     mode_encode
                                                     )
     
     # 训练集分割
-    K_fold_size = 3
+    K_fold_size = 2
     skf = StratifiedKFold(n_splits=K_fold_size, shuffle = True,random_state=999) #交叉验证，分层抽样
     
     # 模型训练
