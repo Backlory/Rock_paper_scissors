@@ -63,8 +63,8 @@ if __name__ =='__main__':
         # 数据预处理
         PSR_Dataset_imgs = m_pp.resize(PSR_Dataset_imgs, [(obj_h,obj_w)])
         #PSR_Dataset_imgs = m_pp.ad_exp_trans(PSR_Dataset_imgs, [])
-        #PSR_Dataset_imgs = m_pp.bilateralfilter(PSR_Dataset_imgs, [])
-        #PSR_Dataset_imgs = m_pp.median_blur(PSR_Dataset_imgs, [5])
+        PSR_Dataset_imgs = m_pp.bilateralfilter(PSR_Dataset_imgs, [])
+        PSR_Dataset_imgs = m_pp.median_blur(PSR_Dataset_imgs, [5])
         # ROI提取
         
         masks = m_Re.segskin_ellipse_mask(  PSR_Dataset_imgs, 
