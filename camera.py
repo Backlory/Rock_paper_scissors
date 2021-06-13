@@ -1,16 +1,32 @@
 # 训练有关函数
+# 训练有关函数
+import cv2
 import numpy as np
 import random
+
+from numpy.lib import utils
+import data.data_loading
 from datetime import datetime
-import cv2
-from numpy.core.fromnumeric import size
+#
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import StratifiedKFold          
+from sklearn.metrics import classification_report                         
+from sklearn.metrics import confusion_matrix, cohen_kappa_score                           
+from matplotlib import pyplot as plt 
+#
 import utils.img_display as u_idsip
 import utils.structure_trans as u_st
-from utils.tools import tic, toc
-
-
+from utils.tools import colorstr, tic, toc
+from weights.weightio import save_obj, load_obj
+#
 import model.preprosess as m_pp
 import model.ROI_extract as m_Re
+import model.feature_extract as m_fet
+import model.feature_encode as m_fed
+import model.train_strategy as m_ts
+from utils.img_display import prepare_path, save_pic, img_square
 
 
 seconds = 1200    #120秒                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
@@ -35,66 +51,39 @@ if __name__ =='__main__':
     for i in range(int(seconds * mps)):
         ret, img = cap.read()
         h,w,c = img.shape
-        img = img[:, int(w/2):, :]
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = img[:, int(w/2 ):, :]
         img = cv2.flip(img, 1)
-        cv2.imwrite(f'data\data_my\{i}_.jpg', img)
+        #cv2.imwrite(f'data\data_my\{i}_.jpg', img)
         #
         img_new_ = u_st.cv2numpy(img)
-        img_new_ = img_new_[np.newaxis,:,:,:]
+        PSR_Dataset_imgs = img_new_[np.newaxis,:,:,:]
         #
-        #fx,fy,fw,fh = cv2.getWindowImageRect('main')
-        #img = cv2.rectangle(img, (fx+int(fw*0.6),int(fh*0.1)),(fx+int(fw*0.8),int(fh*0.3)),(0,0,255),thickness=5) #目标区域
-        #pt1 = (0,0)
-        #pt2 = (int(fw/2*0.5), int(fh*0.5))
-        #img = cv2.rectangle(img, pt1, pt2,(0,0,255),thickness=5) #目标区域
-        #
-        img_new_ = m_pp.resize(img_new_, [(obj_h,obj_w)])
-        #img_new_ = m_pp.median_blur(img_new_, [3])
-        #img_new_ = m_pp.ad_exp_trans(img_new_)
+        
+        # 数据预处理
+        PSR_Dataset_imgs = m_pp.resize(PSR_Dataset_imgs, [(obj_h,obj_w)])
+        #PSR_Dataset_imgs = m_pp.ad_exp_trans(PSR_Dataset_imgs, [])
+        #PSR_Dataset_imgs = m_pp.bilateralfilter(PSR_Dataset_imgs, [])
+        #PSR_Dataset_imgs = m_pp.median_blur(PSR_Dataset_imgs, [5])
+        # ROI提取
+        
+        masks = m_Re.segskin_ellipse_mask(  PSR_Dataset_imgs, 
+                                            theta = -50/180*3.14, 
+                                            cx = 120, 
+                                            cy = 147, 
+                                            ecx = 38.5, 
+                                            ecy = 2.3, 
+                                            a = 15, b = 8)
+                                            
+        masks[0,0,:,:] = m_Re.Morphological_processing(masks[0,0,:,:])
+
+        masks = np.concatenate((masks, masks, masks), axis = 1)
 
 
-        #
-        img_new = img_new_[0,:,:,:]
-        img_new = u_st.numpy2cv(img_new)
+        
+        mask = masks[0,:,:,:]
+        mask = u_st.numpy2cv(mask)
         img = cv2.resize(img, (obj_w,obj_h))
-        temp = np.concatenate((img, img_new), axis = 1)          #, temp), axis = 1)
+        temp = np.concatenate((img, mask), axis = 1)          #, temp), axis = 1)
         cv2.imshow('main', temp)
         cv2.waitKey(int(1000/mps))
-
-
-
-
-
-    # ROI提取
-    mode=3
-    PSR_Dataset_img = m_Re.ROIextractor(PSR_Dataset_img,
-                                        mode,
-                                        savesample = True, 
-                                        timenow = timenow, 
-                                        disp_sample_list = disp_sample_list)
-    # 特征提取
-    # 特征编码
-    # 训练集分割
-    # 模型初始化
-    # 模型训练
-    # 权重文件保存
-
-
-#TODO: 下边这段代码是视频形式显示删了，不需要了
-'''
-    for i in range(120*3):
-        #
-        img = PSR_Dataset_img[i]
-        label = PSR_Dataset_label[i]
-        #
-        #img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        
-        ret, img = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)
-        #img = cv2.Canny(img, 60,200)
-
-        #contours, hierarchy = cv2.findContours(img,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  
-        #img = cv2.drawContours(img, contours,-1,(255,255,255),thickness=-1)  #边缘框
-
-        cv2.imshow('a', img)
-        cv2.waitKey(10)
-        '''

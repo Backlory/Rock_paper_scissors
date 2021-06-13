@@ -1,4 +1,5 @@
 # 训练有关函数
+import cv2
 import numpy as np
 import random
 
@@ -29,7 +30,7 @@ from utils.img_display import prepare_path, save_pic, img_square
 if __name__ =='__main__':
     # 变量准备
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
-    experiment_data = 'data_origin'   #data_origin,  data_my, data_test, data_my_add
+    experiment_data = 'data_my'   #data_origin,  data_my, data_test, data_my_add
     experiment_dir = 'experiment/'+ timenow +'/'
     prepare_path(experiment_dir)
     
@@ -52,7 +53,7 @@ if __name__ =='__main__':
     except:
         # 数据预处理
         funlist=[]
-        funlist.append([m_pp.resize, [(128,128)]])
+        funlist.append([m_pp.resize, [(300,300)]])
         #funlist.append([m_pp.ad_exp_trans, []])
         funlist.append([m_pp.bilateralfilter, []])
         funlist.append([m_pp.median_blur, [5]])
@@ -62,19 +63,25 @@ if __name__ =='__main__':
                                                                 savesample = True, 
                                                                 timenow = timenow, 
                                                                 disp_sample_list = disp_sample_list)
+
         # ROI提取
-        mode_ROI=-1  #-1
+        mode_ROI = 1  #-1
         PSR_Dataset_imgs = m_Re.ROIextractor(PSR_Dataset_imgs,
                                             mode_ROI,
                                             savesample = True, 
                                             timenow = timenow, 
                                             disp_sample_list = disp_sample_list
                                             )
+        for idx, img in enumerate(PSR_Dataset_imgs):
+            if np.max(img) == 0:
+                PSR_Dataset_imgs[idx] = PSR_Dataset_imgs[idx-1]
+                PSR_Dataset_labels[idx] = PSR_Dataset_labels[idx-1]
+                print(idx)
         #保存处理数据
         save_obj(PSR_Dataset_imgs, 'data\\Dataset_imgs_'+ experiment_data +'.joblib')
         save_obj(PSR_Dataset_labels, 'data\\Dataset_labels_'+ experiment_data +'.joblib')
 
-    #============================================================          
+    #============================================================   
     # 特征提取
     mode_fet = 'fourier'           #Round_Hu, Round, Hu, distence_detector, fourier
     try:
@@ -122,7 +129,7 @@ if __name__ =='__main__':
             x_train = scaler.transform(x_train)
             
             #分类器训练
-            classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'ALL_classifier', mode = 1) #ALL_classifier
+            classifiers = m_ts.fit_classifiers(x_train, y_train, classifier = 'SVC', mode = 1) #ALL_classifier, svc
 
             #分类器预测
             #print('train accuracy:')
@@ -209,7 +216,7 @@ if __name__ =='__main__':
             f.close()
 
     # 模型文件保存
-    save_obj(classifiers, 'weights\\classifier.joblib')
+    save_obj(classifiers, 'weights\\svc_classifier.joblib')
         
         
 

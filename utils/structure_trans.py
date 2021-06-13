@@ -3,11 +3,13 @@ import cv2
 
 def gray2ggg(img):
     '''
-    灰度转换为3d
+    灰度转换为3d-numpy
+    
     input:单通道灰度图
     output:三通道灰度图
     '''
-    return np.concatenate((img, img, img), axis = 0)
+    if len(img.shape) == 2:
+        return np.concatenate((img, img, img), axis = 0)
 
 def cv2numpy(img):
     '''
@@ -41,7 +43,7 @@ def _check_imgs(imgs):
     '''
     assert(len(imgs.shape) == 4)
     assert (imgs.shape[1] == 1 or imgs.shape[1] == 3) #号*channal*高*宽
-    assert(np.max(imgs) > 1)#255.
+    assert(np.max(imgs) > 1 or np.max(imgs) == 0)#255.
     return 1
 
 def img2GaussianPyramid(img, level=3):

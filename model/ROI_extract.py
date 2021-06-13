@@ -46,7 +46,21 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     #mask获取
     if mode == 1:
         #基于椭圆肤色模型
-        masks = segskin_ellipse_mask(PSR_Dataset_img)
+        for idx, img in enumerate(PSR_Dataset_img):
+            temp = cv2.cvtColor(u_st.numpy2cv(img), cv2.COLOR_RGB2BGR)
+            PSR_Dataset_img[idx] = u_st.cv2numpy(temp)
+        masks = segskin_ellipse_mask(  PSR_Dataset_img,theta = -50/180*3.14, 
+                                            cx = 120, cy = 147,
+                                            ecx = 38.5, ecy = 2.3, 
+                                            a = 15, b = 8,
+                                            rgb_bgr='RGB')#虽然写的RGB，但是这里其实是BGR
+        
+        for idx, img in enumerate(PSR_Dataset_img):
+            temp = cv2.cvtColor(u_st.numpy2cv(img), cv2.COLOR_BGR2RGB)
+            PSR_Dataset_img[idx] = u_st.cv2numpy(temp)
+                                            
+        for idx, mask in enumerate(masks):
+            masks[idx] = Morphological_processing(mask[0,:,:])
     elif mode==2:
         #canny边缘模型
         masks = canny_expend_mask(PSR_Dataset_img)
@@ -59,7 +73,11 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     elif mode==-1:
         #缝合怪模型，多个mask取平均
         PSR_Dataset_img_64 = graylevel_down(PSR_Dataset_img, 4)
-        masks1 = segskin_ellipse_mask(PSR_Dataset_img_64)
+        masks1 = segskin_ellipse_mask(  PSR_Dataset_img_64,theta = -50/180*3.14, 
+                                            cx = 120, cy = 147,
+                                            ecx = 38.5, ecy = 2.3,
+                                            a = 15, b = 8,
+                                            rgb_bgr='RGB')
         masks2 = canny_expend_mask(PSR_Dataset_img_64)
         masks3 = threshold_OTSU_mask(PSR_Dataset_img_64)
         masks4 = threshold_bg_mask(PSR_Dataset_img_64, 0.2)
@@ -436,9 +454,17 @@ def baweraopen_adapt(img, intensity = 0.2, alpha = 0.001):
 
 #ycrcb椭圆肤色模型
 @fun_run_time
-def segskin_ellipse_mask(imgs):
+def segskin_ellipse_mask(imgs, theta = -50/180*3.14, cx = 114, cy = 147, ecx = 0, ecy = 0, a = 18, b = 7,rgb_bgr='RGB'):
     '''基于YCRCB的椭圆肤色模型.
-    输入一组图像，输出masks。
+    输入一组rgb图像，输出masks。
+
+    theta = -50/180*3.14 #新坐标系倾角，正为顺时针转
+    cx = 114                #新坐标中心在原坐标系的坐标
+    cy = 147
+    ecx = -5 #椭圆偏移坐标
+    ecy = -2
+    a = 18   #肤色模型椭圆中心与轴长，在新坐标系
+    b = 7
     '''
     u_st._check_imgs(imgs)
     imgs = u_st.numpy2cv(imgs)
@@ -449,28 +475,22 @@ def segskin_ellipse_mask(imgs):
     Ymin, Ymax = 16, 235
     Wcb,WLcb, WHcb = 46.97, 23, 14
     Wcr,WLcr, WHcr = 38.76, 20, 10
-    
-    theta = -50/180*3.14 #新坐标系倾角，正为顺时针转
-    cx = 114                #新坐标中心在原坐标系的坐标
-    cy = 147
-    ecx = -5 #椭圆偏移坐标
-    ecy = -2
-    a = 18   #肤色模型椭圆中心与轴长，在新坐标系
-    b = 7
-
     color = ['red','blue','yellow','green','orange','purple','black','gray','pink']
     #plt.figure()
     
     masks = np.zeros((num, h, w, 1), dtype=np.uint8)
     for idx, img in enumerate(imgs):
-        cv2.waitKey(0)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2YCR_CB)
+        if rgb_bgr=='BGR':
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+        else:
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2YCR_CB)
+
         Y, Cr, Cb = cv2.split(img)
         #u_idsip.show_pic(Y,'Y')
         #u_idsip.show_pic(Cr,'Cr')
         #u_idsip.show_pic(Cb,'Cb')
         #
-        #'''
+        '''
         cb1 = 108 + (Kl-Y) * 10/(Kl-Ymin)
         cr1 = 154 + (Kl-Y) * 10/(Kl-Ymin)
         wcbY = WLcb + (Y-Ymin) * (Wcb-WLcb)/(Kl-Ymin)
@@ -484,28 +504,34 @@ def segskin_ellipse_mask(imgs):
         wcrY = WHcr + (Ymax-Y) * (Wcr-WHcr) / (Ymax-Kh);
         Cb_ = np.where(Y>Kh, (Cb - cb1) * Wcb / wcbY + cb1, Cb_)
         Cr_ = np.where(Y>Kh, (Cr - cr1) * Wcr / wcrY + cr1, Cr_)
+        '''
         #'''
         Cb_= np.array(Cb, dtype=np.float)
         Cr_= np.array(Cr, dtype=np.float)
         #
         c_tha = math.cos(theta)
         s_tha = math.sin(theta)
-        x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy)
-        y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy)
+        x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy) - ecx
+        y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy) - ecy
         #
-        #plt.figure()
+        #plt.ion()
+        #plt.figure(1)
+        #plt.cla()
         #plt.axis([-255,255,-255,255])
         #plt.scatter(Cb_.flatten(),Cr_.flatten(), s=20,c=color[idx], alpha=0.01)
-        #plt.axis([-40,40,-40,40])
+        #plt.axis([-20,20,-20,20])
         #plt.scatter(x1.flatten(),y1.flatten(), s=20,c=color[idx], alpha=0.01)
+        #plt.plot([0,0,a,-a],[b,-b,0,0])
         #plt.grid()
         #plt.show()
+        #plt.pause(0.1)
         #
         distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0.001)
         distense[distense==0]=0.0001
+        #mask = np.where(distense <= 1, 255, 127/distense)
         mask = np.where(distense <= 1, 255, 127/distense)
         #u_idsip.show_pic(mask,'ori',showtype='freedom')
-        mask=Morphological_processing(mask)
+        #mask=Morphological_processing(mask)
 
         #
         '''
@@ -520,17 +546,6 @@ def segskin_ellipse_mask(imgs):
         temp = cv2.circle(mask, (int(x),int(y)), 5, 127, 5)
         #cv2.imshow('out',temp)
         #cv2.waitKey(0)'''
-
-        if np.mean(mask)/255<0.1: #另一张背景
-            adapt_x = 15
-            adapt_y = 21
-            x1 = c_tha*(Cb_-cx) + s_tha*(Cr_-cy) - adapt_x
-            y1 = -s_tha*(Cb_-cx) + c_tha*(Cr_-cy) - adapt_y
-            distense = np.where(1, ((x1/a)**2+(y1/b)**2), 0)
-            mask = np.where(distense <= 1, 255, 127/distense)
-            #u_idsip.show_pic(mask,'after')
-            mask=Morphological_processing(mask)
-
         masks[idx, :, :, 0] = mask
     #
     #plt.ioff()

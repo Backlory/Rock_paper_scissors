@@ -161,8 +161,8 @@ def fea_distence_detector(img_cv, direct_number = 36, CIB_masks = None):
     contours, hier = cv2.findContours(img_cv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contour = contours[np.argmax([cv2.contourArea(cnt) for cnt in contours])]   #取得二维最大连通域
     x_leftop, y_leftop, area_w, area_h = cv2.boundingRect(contour)                         #计算区域最小正矩形（左上角点坐标，宽，高）
-    s_h = area_h/10  #挪动的次数为10，计算挪动步长
-    s_w = area_w/10
+    s_h = (area_h/10)-1  #挪动的次数为10，计算挪动步长
+    s_w = (area_w/10)-1
     
     #在目标区域框中遍历81个位置，获取特征向量(1, direct_number)
     Vectors = []
