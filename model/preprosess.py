@@ -126,7 +126,7 @@ def resize(imgs, arg=[], size=(300,300)):
         imgs = u_st.numpy2cv(imgs)
         imgs_new = np.zeros((num,h2, w2, c),  dtype=np.uint8)
         for idx, img in enumerate(imgs):
-            dst = cv2.resize(img, size)
+            dst = cv2.resize(img, (w2,h2))
             imgs_new[idx, :, :, :] = dst
         #
         imgs_new = u_st.cv2numpy(imgs_new)

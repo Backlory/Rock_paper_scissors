@@ -63,7 +63,7 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         masks2 = canny_expend_mask(PSR_Dataset_img_64)
         masks3 = threshold_OTSU_mask(PSR_Dataset_img_64)
         masks4 = threshold_bg_mask(PSR_Dataset_img_64, 0.2)
-        masks7 = slic_masks(PSR_Dataset_img_64)
+        masks7 = GMM_cluster_masks(PSR_Dataset_img_64)
         #
         #masks_muti = cv2.addWeighted(masks1,0.5,masks2,0.5,0)
         #masks_muti = cv2.addWeighted(masks_muti,2/3,masks3,1/3,0)
@@ -133,8 +133,8 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     return PSR_Dataset_img_pred
 
 @fun_run_time
-def slic_masks(imgs):
-    ''' 
+def GMM_cluster_masks(imgs):
+    '''
     GMM聚类
     '''
     u_st._check_imgs(imgs) #[num, c, h, w]

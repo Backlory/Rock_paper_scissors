@@ -89,7 +89,11 @@ if __name__ =='__main__':
     # 特征编码
     mode_encode = 'normal'          #bagofword, normal
     try:
-        X_dataset,  Y_dataset = load_obj('data\\Dataset_encode_'+mode_encode+'_'+ experiment_data +'.joblib')
+        if mode_fet != 'distence_detector' and mode_encode == 'bagofword':
+            assert(0)
+        else:
+            X_dataset,  Y_dataset = load_obj('data\\Dataset_encode_'+mode_encode+'_'+ experiment_data +'.joblib')
+
     except:
         X_dataset,  Y_dataset= m_fed.Featurencoder(     PSR_Dataset_Vectors_list,
                                                         PSR_Dataset_labels,
