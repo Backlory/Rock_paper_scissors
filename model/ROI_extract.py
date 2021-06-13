@@ -20,8 +20,8 @@ from utils.tools import colorstr, tic, toc
 from utils.tools import fun_run_time
 
 
-@fun_run_time
-def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_sample_list=[]):
+#@fun_run_time
+def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_sample_list=[], display=True):
     '''
     输入：4d图片集，(num, c, h, w).rgb图片。\n
     mode\n
@@ -34,8 +34,9 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
     -1=联合1、2、3、4的分割\n
     输出：被剪除mask部分的4d图片集，(num, c, h, w)
     '''
-    print(colorstr('='*50, 'red'))
-    print(colorstr('ROI extracting...'))
+    if display:
+        print(colorstr('='*50, 'red'))
+        print(colorstr('ROI extracting...'))
     if savesample and ( timenow=='' or disp_sample_list==[]):
         raise(ValueError('timenow and disp_sample_list not given.'))
     #
@@ -145,12 +146,13 @@ def ROIextractor(PSR_Dataset_img, mode = 0, savesample=False, timenow='', disp_s
         
     if savesample: u_idsip.save_pic(u_idsip.img_square(PSR_Dataset_img_pred[disp_sample_list, :, :, :]), '02_03_maskminus', filedir)
     
-    print('\tshapes of images:')
-    print('\t',PSR_Dataset_img.shape)
+    if display:
+        print('\tshapes of images:')
+        print('\t',PSR_Dataset_img.shape)
     #处理结束
     return PSR_Dataset_img_pred
 
-@fun_run_time
+#@fun_run_time
 def GMM_cluster_masks(imgs):
     '''
     GMM聚类
@@ -379,7 +381,7 @@ def get_area_by_mouse(img, title=''):
     
     return (y0, y1, x0, x1), (roi_y0, roi_y1, roi_x0, roi_x1), (bg_y0, bg_y1, bg_x0, bg_x1)
 
-@fun_run_time
+#@fun_run_time
 def rgb2HSV(imgs):
     '''rgb转HSV'''
     u_st._check_imgs(imgs)
@@ -394,7 +396,7 @@ def rgb2HSV(imgs):
     u_st._check_imgs(imgs_new)
     return imgs_new
 
-@fun_run_time
+#@fun_run_time
 def rgb2YCrCb(imgs):
     '''rgb转HSV'''
     u_st._check_imgs(imgs)
@@ -409,7 +411,7 @@ def rgb2YCrCb(imgs):
     u_st._check_imgs(imgs_new)
     return imgs_new
 
-@fun_run_time
+#@fun_run_time
 def three2one(imgs, channal=0):
     '''三通道转单通道'''
     u_st._check_imgs(imgs)
@@ -453,7 +455,7 @@ def baweraopen_adapt(img, intensity = 0.2, alpha = 0.001):
     return output
 
 #ycrcb椭圆肤色模型
-@fun_run_time
+#@fun_run_time
 def segskin_ellipse_mask(imgs, theta = -50/180*3.14, cx = 114, cy = 147, ecx = 0, ecy = 0, a = 18, b = 7,rgb_bgr='RGB'):
     '''基于YCRCB的椭圆肤色模型.
     输入一组rgb图像，输出masks。

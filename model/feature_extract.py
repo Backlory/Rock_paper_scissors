@@ -23,8 +23,8 @@ from utils.tools import colorstr, tic, toc
 from utils.tools import fun_run_time
 
 
-@fun_run_time
-def Featurextractor(PSR_Dataset_img, mode = 0):
+#@fun_run_time
+def Featurextractor(PSR_Dataset_img, mode = 0, display=True):
     '''
     输入：被剪除mask部分的4d图片集，(num, c, h, w),RGB\n
     mode\n
@@ -34,8 +34,9 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
     \n
     输出：特征列表，列表内每个元素都是矩阵。\n
     '''
-    print(colorstr('='*50, 'red'))
-    print(colorstr('Feature extracting...'))
+    if display:
+        print(colorstr('='*50, 'red'))
+        print(colorstr('Feature extracting...'))
     #
     num, c, h, w = PSR_Dataset_img.shape
 
@@ -84,11 +85,12 @@ def get_Vectors(imgs, func, **kwargs):
     for idx, img in enumerate(imgs):
         temp = func(img, **kwargs)
         result.append(temp)
-        if idx % int(img_num/10) == int(img_num/10)-1:
-            print(f'\t----{idx+1}/{img_num} has been extracted...')
+        if img_num>10:
+            if idx % int(img_num/10) == int(img_num/10)-1:
+                print(f'\t----{idx+1}/{img_num} has been extracted...')
     #
     #result = np.array(result) #对于同长度向量而言可以转化为array，对于sift等视觉词特征则不行
-    toc(t, func.__name__, img_num)
+    #toc(t, func.__name__, img_num)
     return result
 
 
@@ -280,8 +282,10 @@ def fea_fourier(img_cv, MIN_DESCRIPTOR = 32):
     #轮廓获取
     contours, hier = cv2.findContours(img_cv,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE) #寻找轮廓
     contours = sorted(contours, key = cv2.contourArea, reverse=True)#对一系列轮廓点坐标按它们围成的区域面积进行排序
-    contour_array = contours[0][:, 0, :]
-    
+    if contours!= []:
+        contour_array = contours[0][:, 0, :]
+    else:
+        contour_array = np.array([[40,40],[40,41]])
     #画个样子出来
     #ret = np.ones(img_cv.shape, np.uint8)
     #ret = cv2.drawContours(ret,contours[0],-1,(255,255,255),1) #以最大的轮廓，绘制白色轮廓

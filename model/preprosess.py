@@ -10,15 +10,16 @@ from utils.tools import colorstr, tic, toc
 from utils.tools import fun_run_time
 
 
-@fun_run_time
-def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, timenow='', disp_sample_list=[]):
+#@fun_run_time
+def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, timenow='', disp_sample_list=[], display=True):
     '''
     输入：数据集对象，一系列预处理函数
 
     输出：按顺序预处理好的数据集与标签，图像是np+rgb
     '''
-    print(colorstr('='*50, 'red'))
-    print(colorstr('Preprocess...'))
+    if display:
+        print(colorstr('='*50, 'red'))
+        print(colorstr('Preprocess...'))
     if savesample and ( timenow=='' or disp_sample_list==[]):
         raise(ValueError('timenow and disp_sample_list not given.'))
     #
@@ -49,9 +50,10 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
     t=tic()
     PSR_Dataset_img = np.array(PSR_Dataset_img)
     PSR_Dataset_label = np.array(PSR_Dataset_label)
-    print('\tshapes of images and label:')
-    print('\t',PSR_Dataset_img.shape)
-    print('\t',PSR_Dataset_label.shape)
+    if display:
+        print('\tshapes of images and label:')
+        print('\t',PSR_Dataset_img.shape)
+        print('\t',PSR_Dataset_label.shape)
     toc(t,'list2numpy')
     if savesample:
         temp = PSR_Dataset_img[disp_sample_list, :, :, :]
@@ -75,7 +77,7 @@ def Preprosessing(PSR_Dataset, readlist = [], funclist = [], savesample=False, t
 
 
 #双边滤波
-@fun_run_time
+#@fun_run_time
 def bilateralfilter(imgs, arg, size=3):    
     ''' 
     双边滤波，保留边缘
@@ -93,7 +95,7 @@ def bilateralfilter(imgs, arg, size=3):
     return imgs_new
 
 # 中值滤波     MidBlur
-@fun_run_time
+#@fun_run_time
 def median_blur(imgs, arg, size=3):    
     ''' 
     中值模糊  对椒盐噪声有去燥效果。输入numpy图片
@@ -141,7 +143,7 @@ def resize(imgs, arg=[], size=(300,300)):
 # 非线性变换
 # 灰度世界算法
 # HE
-@fun_run_time
+#@fun_run_time
 def equalizeHist(imgs, arg=[],type='CLAHE'):    
     ''' 
     转到YUV空间，在Y通道均衡，

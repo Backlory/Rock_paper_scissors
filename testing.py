@@ -37,6 +37,8 @@ if __name__ =='__main__':
                 'rock':2
                 }
 
+
+
     # 数据加载
     PSR_Dataset_imgs = []
     PSR_Dataset_labels = []
@@ -49,6 +51,7 @@ if __name__ =='__main__':
     PSR_Dataset_imgs = np.array(PSR_Dataset_imgs)
     PSR_Dataset_imgs = u_st.cv2numpy(PSR_Dataset_imgs)
     classifier = load_obj('weights\\svc_classifier.joblib')
+    scaler = load_obj('weights\\scaler.joblib')
     
 
     # 数据预处理
@@ -82,7 +85,7 @@ if __name__ =='__main__':
     #获取数据
     x_train, y_groundtruth = X_dataset, Y_dataset
 
-    scaler = StandardScaler().fit(x_train)                     #标准化
+    #scaler = StandardScaler().fit(x_train)                     #标准化
     x_train = scaler.transform(x_train)
     
     #分类器分类

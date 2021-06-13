@@ -14,8 +14,8 @@ import utils.img_display as u_idsip
 from utils.tools import colorstr, tic, toc
 from utils.tools import fun_run_time
 
-@fun_run_time
-def Featurencoder(datas_list, labels, mode = 0, onehot=False):
+#@fun_run_time
+def Featurencoder(datas_list, labels, mode = 0, onehot=False, display=True):
     '''
     输入：
     datas=N个元素的特征列表，每个元素代表一幅图的特征值矩阵
@@ -23,8 +23,9 @@ def Featurencoder(datas_list, labels, mode = 0, onehot=False):
     mode= normal
     输出：X_dataset,  Y_dataset，代表训练集向量，N个*m维特征矩阵，N个*K类的二维独热编码
     '''
-    print(colorstr('='*50, 'red'))
-    print(colorstr('Feature encoding...'))
+    if display:
+        print(colorstr('='*50, 'red'))
+        print(colorstr('Feature encoding...'))
     #
     N = len(datas_list)
     assert(N == len(labels))

@@ -1,4 +1,4 @@
-# 训练最终分类器用的。
+# 训练最终分类器用的。生成scaler和classifier
 import cv2
 import numpy as np
 import random
@@ -120,6 +120,7 @@ if __name__ =='__main__':
         
     # 模型文件保存
     save_obj(classifier, 'weights\\svc_classifier.joblib')
+    save_obj(scaler, 'weights\\scaler.joblib')
         
         
 
