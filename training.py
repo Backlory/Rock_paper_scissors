@@ -76,7 +76,7 @@ if __name__ =='__main__':
 
     #============================================================          
     # 特征提取
-    mode_fet = 'distence_detector'           #Round_Hu, Round, Hu, distence_detector
+    mode_fet = 'fourier'           #Round_Hu, Round, Hu, distence_detector, fourier
     try:
         PSR_Dataset_Vectors_list = load_obj('data\\Dataset_vectors_'+mode_fet+'_'+ experiment_data +'.joblib')
     except:
@@ -87,7 +87,7 @@ if __name__ =='__main__':
         save_obj(PSR_Dataset_Vectors_list, 'data\\Dataset_vectors_'+mode_fet+'_'+ experiment_data +'.joblib')
     
     # 特征编码
-    mode_encode = 'bagofword'          #bagofword, normal
+    mode_encode = 'normal'          #bagofword, normal
     try:
         X_dataset,  Y_dataset = load_obj('data\\Dataset_encode_'+mode_encode+'_'+ experiment_data +'.joblib')
     except:
@@ -98,7 +98,7 @@ if __name__ =='__main__':
         save_obj((X_dataset,  Y_dataset), 'data\\Dataset_encode_'+mode_encode+'_'+ experiment_data +'.joblib')
     
     # 训练集分割
-    for K_fold_size in [3]:
+    for K_fold_size in range(2,11):
         skf = StratifiedKFold(n_splits=K_fold_size, shuffle = True,random_state=999) #交叉验证，分层抽样
         
         # 模型训练

@@ -64,7 +64,8 @@ def Featurextractor(PSR_Dataset_img, mode = 0):
                                             fea_distence_detector,
                                             direct_number = direct_number,
                                             CIB_masks=CIB_masks)
-
+    elif mode=='fourier':
+        PSR_Dataset_Vectors = get_Vectors(PSR_Dataset_img, fea_fourier)
     #处理结束
 
     return PSR_Dataset_Vectors
@@ -102,13 +103,14 @@ def fea_circularity(img_cv):
     img_cv[img_cv>0]=255
     #
     contours, _ = cv2.findContours(img_cv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key = cv2.contourArea, reverse=True)#按面积排序
     a = cv2.contourArea(contours[0]) * 4 * math.pi      #面积
     b = math.pow(cv2.arcLength(contours[0], True), 2)   #周长
     try:
-        Vectors = a / b
+        Vector = a / b
     except:
-        Vectors = 0
-    return np.array(Vectors)
+        Vector = 0
+    return np.array(Vector)
 
 #Hu不变矩
 def fea_hu_moments(img_cv):
@@ -226,6 +228,76 @@ def fea_distence_detector(img_cv, direct_number = 36, CIB_masks = None):
 # 边缘提取
 # 链码提取
 # 傅里叶描述子
+def fea_fourier(img_cv, MIN_DESCRIPTOR = 32):
+    '''
+    计算f傅里叶描述子。输入cv图片，RGB
+    输出长度为MIN_DESCRIPTOR的傅里叶描述子向量(如32*1)
+    '''
+
+    def truncate_descriptor(fourier_result, MIN_DESCRIPTOR=32):
+        '''
+        截断傅里叶描述子。对于图像，shift后，取中间的MIN_DESCRIPTOR 项描述子，再变回来\n
+        输入：傅里叶描述子\n
+        输出：截断保留中间后的傅里叶描述子\n
+        '''
+        descriptors_fftshift = np.fft.fftshift(fourier_result)
+        temp = int(len(descriptors_fftshift) / 2)
+        low, high = temp - int(MIN_DESCRIPTOR / 2), temp + int(MIN_DESCRIPTOR / 2)
+        descriptors_fftshift = descriptors_fftshift[low:high]
+        descriptors_fftshift = np.fft.ifftshift(descriptors_fftshift)
+        return descriptors_fftshift
+
+    def reconstruct(img, descirptor):
+        '''
+        由傅里叶描述子重建轮廓图\n
+        输入：图像(只用了size)和傅里叶描述子\n
+        输出：重建好的图片\n
+        '''
+        #descirptor = truncate_descriptor(fourier_result, degree)
+        #descirptor = np.fft.ifftshift(fourier_result)
+        #descirptor = truncate_descriptor(fourier_result)
+        #print(descirptor)
+        contour_reconstruct = np.fft.ifft(descirptor)
+        contour_reconstruct = np.array([contour_reconstruct.real,       #虚部实部映射到图片中
+                                        contour_reconstruct.imag])
+        contour_reconstruct = np.transpose(contour_reconstruct)     #转置
+        contour_reconstruct = np.expand_dims(contour_reconstruct, axis = 1) #添加轴
+        #归一化？
+        if contour_reconstruct.min() < 0:
+            contour_reconstruct -= contour_reconstruct.min()
+        contour_reconstruct *= img.shape[0] / contour_reconstruct.max()
+        contour_reconstruct = contour_reconstruct.astype(np.int32, copy = False)
+        #根据归一化结果绘制边框
+        black_bg = np.ones(img.shape, np.uint8) #创建黑色幕布
+        black = cv2.drawContours(black_bg,contour_reconstruct,-1,(255,255,255),1) #绘制白色轮廓
+        cv2.imshow("contour_reconstruct", black)
+        return black
+
+    #获取二值化图像
+    img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2GRAY)
+    img_cv[img_cv>0]=255
+    
+    #轮廓获取
+    contours, hier = cv2.findContours(img_cv,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE) #寻找轮廓
+    contours = sorted(contours, key = cv2.contourArea, reverse=True)#对一系列轮廓点坐标按它们围成的区域面积进行排序
+    contour_array = contours[0][:, 0, :]
+    
+    #画个样子出来
+    #ret = np.ones(img_cv.shape, np.uint8)
+    #ret = cv2.drawContours(ret,contours[0],-1,(255,255,255),1) #以最大的轮廓，绘制白色轮廓
+    #傅里叶
+    contours_complex = np.empty(contour_array.shape[:-1], dtype=np.complex)
+    contours_complex.real = contour_array[:,0]#横坐标作为实数部分
+    contours_complex.imag = contour_array[:,1]#纵坐标作为虚数部分
+    fourier_result = np.fft.fft(contours_complex)#进行傅里叶变换
+    
+    #截短傅里叶描述子
+    Vector = truncate_descriptor(fourier_result)
+    #reconstruct(ret, descirptor_in_use)
+    Vector = np.abs(Vector)
+    
+    return np.array(Vector)
+
 
 # 细化骨架提取
 # 图论统计量
