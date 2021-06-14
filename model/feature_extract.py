@@ -284,21 +284,22 @@ def fea_fourier(img_cv, MIN_DESCRIPTOR = 32):
     contours = sorted(contours, key = cv2.contourArea, reverse=True)#对一系列轮廓点坐标按它们围成的区域面积进行排序
     if contours!= []:
         contour_array = contours[0][:, 0, :]
+        #画个样子出来
+        #ret = np.ones(img_cv.shape, np.uint8)
+        #ret = cv2.drawContours(ret,contours[0],-1,(255,255,255),1) #以最大的轮廓，绘制白色轮廓
+        #傅里叶
+        contours_complex = np.empty(contour_array.shape[:-1], dtype=np.complex)
+        contours_complex.real = contour_array[:,0]#横坐标作为实数部分
+        contours_complex.imag = contour_array[:,1]#纵坐标作为虚数部分
+        fourier_result = np.fft.fft(contours_complex)#进行傅里叶变换
+        
+        #截短傅里叶描述子
+        Vector = truncate_descriptor(fourier_result)
+        #reconstruct(ret, descirptor_in_use)
+        Vector = np.abs(Vector)
     else:
-        contour_array = np.array([[40,40],[40,41]])
-    #画个样子出来
-    #ret = np.ones(img_cv.shape, np.uint8)
-    #ret = cv2.drawContours(ret,contours[0],-1,(255,255,255),1) #以最大的轮廓，绘制白色轮廓
-    #傅里叶
-    contours_complex = np.empty(contour_array.shape[:-1], dtype=np.complex)
-    contours_complex.real = contour_array[:,0]#横坐标作为实数部分
-    contours_complex.imag = contour_array[:,1]#纵坐标作为虚数部分
-    fourier_result = np.fft.fft(contours_complex)#进行傅里叶变换
-    
-    #截短傅里叶描述子
-    Vector = truncate_descriptor(fourier_result)
-    #reconstruct(ret, descirptor_in_use)
-    Vector = np.abs(Vector)
+        Vector = np.zeros((32))
+
     
     return np.array(Vector)
 

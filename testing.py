@@ -34,7 +34,8 @@ if __name__ =='__main__':
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
     dect_num = {'paper':0,
                 'scissors':1,
-                'rock':2
+                'rock':2,
+                'other':3
                 }
 
 
@@ -45,6 +46,7 @@ if __name__ =='__main__':
     for dirpath, dirnames, filenames in os.walk("data\\test_set", topdown=False):
         for filename in filenames:
             temp = cv2.imread(dirpath+'\\'+filename)
+            temp = cv2.resize(temp, (300,300))
             temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGB)
             PSR_Dataset_imgs.append(temp)
             PSR_Dataset_labels.append(dect_num[str(filename[:-5])])
@@ -94,10 +96,4 @@ if __name__ =='__main__':
     print(confusion_matrix(y_groundtruth, y_pred))
     print(classification_report(y_groundtruth, y_pred, zero_division=1, digits=4, output_dict=False))
 
-        
-        
 
-
-
-
-    print()

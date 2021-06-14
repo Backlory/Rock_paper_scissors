@@ -31,7 +31,7 @@ from utils.img_display import prepare_path, save_pic, img_square
 if __name__ =='__main__':
     # 变量准备
     timenow = datetime.now().strftime('%Y%m%d-%H_%M_%S')
-    experiment_data = 'data_my'   #data_origin,  data_my, data_test, data_my_add
+    experiment_data = 'data_all'   #data_origin,  data_my, data_test, data_my_add, data_all
     experiment_dir = 'experiment/'+ timenow +'/'
     prepare_path(experiment_dir)
     
